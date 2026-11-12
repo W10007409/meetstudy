@@ -54,12 +54,15 @@ internal fun ProofSaving(record: SessionRecord, photoPath: String, tz: TimeZone,
 }
 
 @Composable
-fun ProofDoneScreen(record: SessionRecord, onReport: () -> Unit, onHome: () -> Unit) {
+fun ProofDoneScreen(record: SessionRecord, starsToday: Int, onReport: () -> Unit, onHome: () -> Unit) {
+    var sharing by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
         Text("공부 인증 완료!", fontSize = 40.sp)
         record.proofPhotoPath?.let { PhotoThumbnail(it, Modifier.height(240.dp)) }
         if (record.proofStar) Text("+1 ★", fontSize = 40.sp) else Text("오늘 별은 다 모았어요", fontSize = 22.sp)
+        OutlinedButton(onClick = { sharing = true }) { Text("공유하기", fontSize = 20.sp) }
         OutlinedButton(onClick = onReport) { Text("리포트 보기", fontSize = 20.sp) }
         TextButton(onClick = onHome) { Text("홈으로", fontSize = 16.sp) }
     }
+    if (sharing) ShareSheet(record, starsToday) { sharing = false }
 }

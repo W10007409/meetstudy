@@ -84,7 +84,12 @@ fun StudyFlow(onExit: () -> Unit) {
             if (path == null) ProofCamera(r.id, { photoPath = it }, { step = Step.Reward })
             else ProofSaving(r, path, tz) { record = it; step = Step.ProofDone }
         }
-        Step.ProofDone -> ProofDoneScreen(checkNotNull(record), { step = Step.Report }, onExit)
+        Step.ProofDone -> {
+            val r = checkNotNull(record)
+            // History was loaded before the proof star, so swap this record for its updated copy.
+            val stars = history.filter { it.localDate(tz) == today && it.id != r.id }.sumOf { it.stars() } + r.stars()
+            ProofDoneScreen(r, stars, { step = Step.Report }, onExit)
+        }
         Step.Report -> ReportScreen(checkNotNull(record), history, tz, today) { step = Step.Reward }
     }
 }

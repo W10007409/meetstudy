@@ -13,7 +13,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -29,6 +32,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun RewardScreen(record: SessionRecord, starsToday: Int, historyLoaded: Boolean, onProof: () -> Unit, onReport: () -> Unit, onHome: () -> Unit) {
     val focused = record.segments.filter { it.state == FocusState.STUDYING }.sumOf { it.endMs - it.startMs }
+    var sharing by remember { mutableStateOf(false) }
     val canProof = StarRules.proofStarAllowed(starsToday) && !record.proofStar
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -49,9 +53,11 @@ fun RewardScreen(record: SessionRecord, starsToday: Int, historyLoaded: Boolean,
         }
         Text("순공부 ${formatDuration(focused)}", fontSize = 24.sp)
         BigButton(if (canProof) "공부 인증하고 별 더 받기" else "오늘 별은 다 모았어요", enabled = canProof && historyLoaded, onClick = onProof)
+        OutlinedButton(onClick = { sharing = true }) { Text("공유하기", fontSize = 20.sp) }
         OutlinedButton(onClick = onReport, enabled = historyLoaded) { Text("리포트 보기", fontSize = 20.sp) }
         TextButton(onClick = onHome) { Text("홈으로", fontSize = 16.sp) }
     }
+    if (sharing) ShareSheet(record, starsToday) { sharing = false }
 }
 
 @Composable
