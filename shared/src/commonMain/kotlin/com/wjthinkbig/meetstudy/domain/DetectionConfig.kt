@@ -10,4 +10,5 @@ data class DetectionConfig(
     val pitchDownAllowDeg: Float = 40f,
     val eyesClosedProb: Float = 0.3f,
     val returnDebounceMs: Long = 2_000,
+    val candidateGraceMs: Long = 1_000,
 )

@@ -128,4 +128,37 @@ class FocusStateMachineTest {
         assertNull(m.onFrame(noFace(10_500))) // timer restarts after resume: 4.5s < 10s
         assertEquals(StateChange(FocusState.AWAY, 10_500), m.feed(11_000, 20_500) { noFace(it) }.single())
     }
+
+    @Test fun singleFrameDropoutsDoNotResetAwayTiming() {
+        val m = sm()
+        val changes = (0L..10_000L step 200).mapNotNull { t ->
+            m.onFrame(if (t > 0 && t % 2_000 == 0L) studying(t) else noFace(t))
+        }
+        assertEquals(listOf(StateChange(FocusState.AWAY, 0)), changes)
+    }
+
+    @Test fun interruptionLongerThanGraceResetsTiming() {
+        val m = sm()
+        assertEquals(emptyList(), (0L..4_800L step 200).mapNotNull { m.onFrame(noFace(it)) })
+        assertEquals(emptyList(), (5_000L..6_200L step 200).mapNotNull { m.onFrame(studying(it)) })
+        assertEquals(emptyList(), (6_400L..16_200L step 200).mapNotNull { m.onFrame(noFace(it)) })
+        assertEquals(StateChange(FocusState.AWAY, 6_400), m.onFrame(noFace(16_400)))
+    }
+
+    @Test fun appLeftDuringBreakReturnsToBreak() {
+        val m = sm()
+        m.setBreak(true, 0)
+        assertEquals(StateChange(FocusState.APP_LEFT, 1_000), m.setAppLeft(true, 1_000))
+        assertEquals(StateChange(FocusState.BREAK, 2_000), m.setAppLeft(false, 2_000))
+        assertEquals(StateChange(FocusState.STUDYING, 3_000), m.setBreak(false, 3_000))
+    }
+
+    @Test fun breakEndingWhileAppLeftStaysAppLeftThenStudying() {
+        val m = sm()
+        m.setBreak(true, 0)
+        m.setAppLeft(true, 1_000)
+        assertNull(m.setBreak(false, 2_000))
+        assertEquals(FocusState.APP_LEFT, m.state)
+        assertEquals(StateChange(FocusState.STUDYING, 3_000), m.setAppLeft(false, 3_000))
+    }
 }
