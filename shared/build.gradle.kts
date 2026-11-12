@@ -29,6 +29,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.mlkit.face)
             implementation(libs.mlkit.pose)
+            implementation(libs.litert)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

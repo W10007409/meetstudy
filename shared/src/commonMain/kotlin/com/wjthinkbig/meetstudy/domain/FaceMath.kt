@@ -1,0 +1,26 @@
+package com.wjthinkbig.meetstudy.domain
+
+import kotlin.math.sqrt
+
+const val IDENTITY_THRESHOLD = 0.70f // 실기기에서 튜닝
+
+fun cosine(a: FloatArray, b: FloatArray): Float {
+    require(a.size == b.size) { "size mismatch" }
+    var dot = 0f; var na = 0f; var nb = 0f
+    for (i in a.indices) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
+    val d = sqrt(na) * sqrt(nb)
+    return if (d == 0f) 0f else dot / d
+}
+
+private fun normalized(v: FloatArray): FloatArray {
+    val n = sqrt(v.fold(0f) { s, x -> s + x * x })
+    return if (n == 0f) v.copyOf() else FloatArray(v.size) { v[it] / n }
+}
+
+/** Mean of the unit-normalized vectors, re-normalized to unit length. */
+fun averageNormalized(list: List<FloatArray>): FloatArray {
+    require(list.isNotEmpty()) { "empty" }
+    val sum = FloatArray(list[0].size)
+    for (v in list) normalized(v).forEachIndexed { i, x -> sum[i] += x }
+    return normalized(sum)
+}

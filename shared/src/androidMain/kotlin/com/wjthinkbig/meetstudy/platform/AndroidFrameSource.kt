@@ -38,6 +38,8 @@ import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.wjthinkbig.meetstudy.domain.FrameSignals
+import com.wjthinkbig.meetstudy.domain.IDENTITY_THRESHOLD
+import com.wjthinkbig.meetstudy.domain.cosine
 import com.google.android.gms.tasks.Task
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -92,6 +94,10 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
             PoseDetectorOptions.Builder().setDetectorMode(PoseDetectorOptions.STREAM_MODE).build(),
         )
         val executor = Executors.newSingleThreadExecutor()
+        // Identity check only when someone is enrolled; read once, so re-enrolling needs a new frame source.
+        val enrolled = FaceVault.load()
+        val embedder = enrolled?.let { FaceEmbedder(context.applicationContext) }?.takeIf { it.available }
+        val schedule = IdentitySchedule()
         var lastFrameMs = 0L
         var lastPoseMs = 0L
         var lastPose: PoseReading? = null
@@ -108,15 +114,29 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     val input = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
                     val faces = awaitOrNull(faceDetector.process(input)) ?: return@setImageAnalysisAnalyzer
                     val face = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
+                    var identityMatch: Boolean? = null
                     if (face != null) {
-                        source.latestFace.value = try {
+                        val crop = try {
                             cropFace(proxy, face.boundingBox)
                         } catch (e: Exception) {
                             Log.w(TAG, "crop failed: " + e.javaClass.simpleName)
                             null
                         }
+                        source.latestFace.value = crop
+                        if (embedder != null && enrolled != null && crop != null && schedule.due(now)) {
+                            schedule.checked(now)
+                            identityMatch = try {
+                                val sim = cosine(embedder.embedBlocking(crop), enrolled)
+                                Log.i(FACE_TAG, "similarity=$sim")
+                                sim >= IDENTITY_THRESHOLD
+                            } catch (e: Exception) {
+                                Log.w(FACE_TAG, "embed failed: " + e.javaClass.simpleName)
+                                null
+                            }
+                        }
                     } else {
                         source.latestFace.value = null
+                        schedule.faceGone()
                         if (now - lastPoseMs >= POSE_GAP_MS) {
                             lastPoseMs = now
                             awaitOrNull(poseDetector.process(input))?.let { lastPose = poseReading(it) }
@@ -125,7 +145,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     val reading = face?.let {
                         FaceReading(it.headEulerAngleY, it.headEulerAngleX, it.leftEyeOpenProbability, it.rightEyeOpenProbability)
                     }
-                    source.flow.tryEmit(toSignals(now, reading, lastPose))
+                    source.flow.tryEmit(toSignals(now, reading, lastPose).copy(identityMatch = identityMatch))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
                     Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)
@@ -140,6 +160,8 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
             activeController = null
             controller.unbind()
             executor.shutdown()
+            // embedBlocking/close share a lock, so an in-flight embed finishes before the interpreter closes.
+            embedder?.close()
             faceDetector.close()
             poseDetector.close()
         }

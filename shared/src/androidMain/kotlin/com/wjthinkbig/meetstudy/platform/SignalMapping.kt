@@ -34,3 +34,11 @@ fun clipRect(left: Int, top: Int, right: Int, bottom: Int, w: Int, h: Int): IntA
     val r = minOf(right, w); val b = minOf(bottom, h)
     return if (r > l && b > t) intArrayOf(l, t, r - l, b - t) else null
 }
+
+/** Identity re-check cadence: first face frame after the face (re)appears, then every [intervalMs] while visible. */
+class IdentitySchedule(private val intervalMs: Long = 30_000) {
+    private var lastMs: Long? = null
+    fun due(now: Long): Boolean = lastMs.let { it == null || now - it >= intervalMs }
+    fun checked(now: Long) { lastMs = now }
+    fun faceGone() { lastMs = null }
+}
