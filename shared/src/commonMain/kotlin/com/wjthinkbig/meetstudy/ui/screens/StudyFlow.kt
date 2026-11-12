@@ -27,6 +27,7 @@ import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
 import com.wjthinkbig.meetstudy.ui.todayIn
 import com.wjthinkbig.meetstudy.platform.ProofCamera
 import com.wjthinkbig.meetstudy.platform.rememberFrameSource
+import com.wjthinkbig.meetstudy.platform.logProof
 
 private enum class Step { Goal, Identity, Guide, Baseline, Study, Reward, Proof, ProofDone, Report }
 
@@ -46,7 +47,7 @@ fun StudyFlow(onExit: () -> Unit) {
     LaunchedEffect(step == Step.Reward) {
         if (step == Step.Reward) {
             val r = record
-            history = withContext(Dispatchers.Default) { SessionStore(appFilesDir()).all() }
+            history = withContext(Dispatchers.Default) { readHistoryOrEmpty({ SessionStore(appFilesDir()).all() }) }
             loadedFor = r
         }
     }
@@ -87,9 +88,19 @@ fun StudyFlow(onExit: () -> Unit) {
         Step.ProofDone -> {
             val r = checkNotNull(record)
             // History was loaded before the proof star, so swap this record for its updated copy.
-            val stars = history.filter { it.localDate(tz) == today && it.id != r.id }.sumOf { it.stars() } + r.stars()
+            val stars = withUpdated(history, r).filter { it.localDate(tz) == today }.sumOf { it.stars() }
             ProofDoneScreen(r, stars, { step = Step.Report }, onExit)
         }
-        Step.Report -> ReportScreen(checkNotNull(record), history, tz, today) { step = Step.Reward }
+        Step.Report -> {
+            val r = checkNotNull(record)
+            ReportScreen(r, withUpdated(history, r), tz, today) { step = Step.Reward }
+        }
     }
 }
+
+/** [history] may predate [r]'s latest save (e.g. the proof star), so replace it by id; appended if missing. */
+internal fun withUpdated(history: List<SessionRecord>, r: SessionRecord) = history.filterNot { it.id == r.id } + r
+
+/** Read-only fallback: an IO error is logged by class name only and treated as no history; nothing is written. */
+internal fun readHistoryOrEmpty(read: () -> List<SessionRecord>, log: (String) -> Unit = ::logProof): List<SessionRecord> =
+    try { read() } catch (e: Exception) { log("history load failed: " + e::class.simpleName); emptyList() }

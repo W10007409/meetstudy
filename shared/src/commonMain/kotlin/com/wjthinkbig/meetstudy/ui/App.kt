@@ -37,6 +37,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import com.wjthinkbig.meetstudy.ui.screens.EnrollScreen
 import com.wjthinkbig.meetstudy.ui.screens.StudyFlow
+import com.wjthinkbig.meetstudy.ui.screens.readHistoryOrEmpty
 
 @Composable
 fun App() {
@@ -81,7 +82,7 @@ private fun Home(onStart: () -> Unit, onReEnroll: () -> Unit, onHistory: (Report
         OutlinedButton(onClick = {
             scope.launch {
                 val tz = TimeZone.currentSystemDefault()
-                val all = withContext(Dispatchers.Default) { SessionStore(appFilesDir()).all() }
+                val all = withContext(Dispatchers.Default) { readHistoryOrEmpty({ SessionStore(appFilesDir()).all() }) }
                 val latest = all.maxByOrNull { it.startMs }
                 if (latest == null) empty = true else onHistory(ReportData(latest, all, tz, todayIn(tz)))
             }
