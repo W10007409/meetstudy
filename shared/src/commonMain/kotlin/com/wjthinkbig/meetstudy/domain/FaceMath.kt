@@ -2,7 +2,7 @@ package com.wjthinkbig.meetstudy.domain
 
 import kotlin.math.sqrt
 
-const val IDENTITY_THRESHOLD = 0.70f // 실기기에서 튜닝
+const val IDENTITY_THRESHOLD = 0.50f // ponytail: provisional until on-device calibration (128-d unaligned crops)
 
 fun cosine(a: FloatArray, b: FloatArray): Float {
     require(a.size == b.size) { "size mismatch" }

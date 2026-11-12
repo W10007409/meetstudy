@@ -56,6 +56,7 @@ fun EnrollScreen(onDone: () -> Unit) {
     var consent by remember { mutableStateOf(false) }
     var started by remember { mutableStateOf(false) }
     var step by remember { mutableIntStateOf(0) }
+    var saveFailed by remember { mutableStateOf(false) }
 
     Column(
         Modifier.fillMaxSize().padding(24.dp),
@@ -77,7 +78,8 @@ fun EnrollScreen(onDone: () -> Unit) {
                     Checkbox(checked = consent, onCheckedChange = { consent = it }, modifier = Modifier.size(48.dp))
                     Text("얼굴 정보는 이 기기에만 저장돼요", fontSize = 22.sp)
                 }
-                BigButton("시작하기", enabled = consent) { started = true }
+                if (saveFailed) Text("저장에 실패했어요. 다시 해볼까요?", fontSize = 22.sp, textAlign = TextAlign.Center)
+                BigButton(if (saveFailed) "다시 해보기" else "시작하기", enabled = consent) { saveFailed = false; started = true }
             }
             else -> {
                 Text("${(step + 1).coerceAtMost(STEPS.size)} / ${STEPS.size}", fontSize = 22.sp)
@@ -107,7 +109,14 @@ fun EnrollScreen(onDone: () -> Unit) {
                 holdStart = null
                 step = captured.size
                 if (captured.size == STEPS.size) {
-                    FaceVault.save(averageNormalized(captured))
+                    try {
+                        FaceVault.save(averageNormalized(captured))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        saveFailed = true; started = false; step = 0
+                        return@collect
+                    }
                     onDone()
                 }
             }
@@ -116,7 +125,7 @@ fun EnrollScreen(onDone: () -> Unit) {
 }
 
 @Composable
-private fun BigButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun BigButton(text: String, enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
