@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import com.wjthinkbig.meetstudy.domain.Baseline
+import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
 import com.wjthinkbig.meetstudy.platform.rememberFrameSource
 
 private enum class Step { Goal, Identity, Guide, Baseline, Study }
@@ -24,6 +25,16 @@ fun StudyFlow(onExit: () -> Unit) {
     var step by remember { mutableStateOf(Step.Goal) }
     var goalMs by remember { mutableStateOf(0L) }
     var baseline by remember { mutableStateOf<Baseline?>(null) }
+
+    // Back = previous setup step. Guide goes back to Goal (not Identity: the check only re-runs when the face reappears).
+    PlatformBackHandler {
+        when (step) {
+            Step.Goal -> onExit()
+            Step.Identity, Step.Guide -> step = Step.Goal
+            Step.Baseline -> step = Step.Guide
+            Step.Study -> onExit()
+        }
+    }
 
     when (step) {
         Step.Goal -> GoalSetupScreen { goalMs = it; step = Step.Identity }

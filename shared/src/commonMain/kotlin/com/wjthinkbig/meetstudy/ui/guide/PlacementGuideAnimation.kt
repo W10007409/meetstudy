@@ -70,7 +70,20 @@ fun PlacementGuideAnimation(modifier: Modifier = Modifier) {
 // ponytail: each layer is Canvas shapes; swap its body for Image(painterResource(guide_*.png)) when art lands.
 
 private val DrawScope.deskTop get() = size.height * 0.72f
-private val DrawScope.tabletBase get() = Offset(size.width * 0.70f, deskTop)
+private val DrawScope.tabletW get() = size.width * 0.12f
+private val DrawScope.tabletH get() = size.height * 0.30f
+private val DrawScope.standH get() = size.height * 0.05f
+
+/** Pivot (bottom centre of the tablet) resting on the stand; lifted as it tilts so the corner never dips below the desk. */
+private fun DrawScope.tabletPivot(tilt: Float) =
+    Offset(size.width * 0.70f, deskTop - standH - tabletW * 0.36f * tilt)
+
+/** The camera sits at the top-centre of the tablet; at 45 degrees that is up-left of the pivot. */
+private fun DrawScope.cameraPoint(): Offset {
+    val p = tabletPivot(1f)
+    val d = tabletH * 0.7071f
+    return Offset(p.x - d, p.y - d)
+}
 private val DrawScope.kidHeadY get() = size.height * 0.40f
 
 @Composable
@@ -100,35 +113,37 @@ fun KidLayer(modifier: Modifier, walk: Float) = Canvas(modifier) {
     drawCircle(Navy, r * 0.1f, head + Offset(r * 0.35f, -r * 0.1f))
 }
 
-/** [drop] 0..~1.1 scale/bounce onto the desk corner, [tilt] 0..1 rotates to 45 degrees. */
+/** [drop] 0..~1.1 scale/bounce onto the desk corner (on a small stand), [tilt] 0..1 rotates to 45 degrees. */
 @Composable
 fun TabletLayer(modifier: Modifier, drop: Float, tilt: Float) = Canvas(modifier) {
     if (drop <= 0f) return@Canvas
-    val w = size.width * 0.12f
-    val base = tabletBase.let { it.copy(y = it.y - w * 0.36f * tilt) } // keeps the tilted corner on the desk
-    val h = size.height * 0.30f
+    val w = tabletW
+    val h = tabletH
+    val base = tabletPivot(tilt)
     val fall = (1f - drop.coerceAtMost(1f)) * -size.height * 0.25f
-    scale(0.6f + 0.4f * drop, base) {
+    scale(0.6f + 0.4f * drop, Offset(base.x, deskTop)) {
+        val stand = Offset(base.x - w * 0.6f, deskTop - standH + fall)
+        drawRoundRect(Coral, stand, Size(w * 1.2f, standH), CornerRadius(10f))
+        drawRoundRect(Navy, stand, Size(w * 1.2f, standH), CornerRadius(10f), Stroke(4f))
         rotate(-45f * tilt, base) {
             val tl = Offset(base.x - w / 2, base.y - h + fall)
             drawRoundRect(Navy, tl, Size(w, h), CornerRadius(14f))
             drawRoundRect(Mint, tl + Offset(8f, 8f), Size(w - 16f, h - 16f), CornerRadius(8f))
-            drawCircle(Navy, 5f, Offset(base.x, tl.y + 4f))
+            drawCircle(Butter, 6f, Offset(base.x, tl.y + 4f)) // camera
         }
     }
 }
 
-/** [open] 0..1 fans out from the tablet camera toward the kid, with twinkles. */
+/** [open] 0..1 fans out from the tablet camera toward the kid's face and the book, with twinkles. */
 @Composable
 fun FovLayer(modifier: Modifier, open: Float, sparkleTime: Float = 0f) = Canvas(modifier) {
     if (open <= 0f) return@Canvas
-    val apex = Offset(tabletBase.x - size.width * 0.04f, deskTop - size.height * 0.30f)
-    val kidX = size.width * 0.22f
-    val spread = size.height * 0.30f
+    val apex = cameraPoint()
+    val farX = size.width * 0.22f
     val fan = Path().apply {
         moveTo(apex.x, apex.y)
-        lineTo(kidX, kidHeadY - spread)
-        lineTo(kidX, kidHeadY + spread)
+        lineTo(farX, size.height * 0.2f)
+        lineTo(farX, deskTop) // reaches down to the book
         close()
     }
     scale(open, 1f, apex) {
@@ -136,7 +151,7 @@ fun FovLayer(modifier: Modifier, open: Float, sparkleTime: Float = 0f) = Canvas(
         drawPath(fan, Navy.copy(alpha = 0.5f), style = Stroke(4f))
     }
     if (open >= 1f) {
-        listOf(Offset(0.4f, 0.30f), Offset(0.32f, 0.5f), Offset(0.5f, 0.42f)).forEachIndexed { i, p ->
+        listOf(Offset(0.42f, 0.42f), Offset(0.34f, 0.55f), Offset(0.52f, 0.5f)).forEachIndexed { i, p ->
             val a = (sin((sparkleTime * 40f + i) * 1.7f) + 1f) / 2f
             sparkle(Offset(size.width * p.x, size.height * p.y), size.height * 0.035f * (0.5f + a), Color.White.copy(alpha = 0.4f + 0.6f * a))
         }
@@ -152,19 +167,26 @@ private fun DrawScope.sparkle(c: Offset, r: Float, color: Color) {
     drawPath(p, color)
 }
 
-/** [pop] 0..~1.1 scale bounce, badge in the top-left. */
+/** [pop] 0..~1.1 scale bounce: a fist with a raised thumb on a butter badge, top-right. */
 @Composable
 fun ThumbsUpLayer(modifier: Modifier, pop: Float) = Canvas(modifier) {
     if (pop <= 0f) return@Canvas
     val c = Offset(size.width * 0.85f, size.height * 0.2f)
-    val r = size.height * 0.12f
+    val r = size.height * 0.13f
     scale(pop, c) {
         drawCircle(Butter, r, c)
         drawCircle(Navy, r, c, style = Stroke(5f))
-        val fist = c + Offset(-r * 0.5f, -r * 0.05f)
-        val fistSize = Size(r * 0.9f, r * 0.6f)
-        drawRoundRect(Coral, fist, fistSize, CornerRadius(10f))
-        drawRoundRect(Coral, c + Offset(-r * 0.1f, -r * 0.6f), Size(r * 0.3f, r * 0.6f), CornerRadius(10f))
-        drawRoundRect(Navy, fist, fistSize, CornerRadius(10f), Stroke(4f))
+        val thumb = c + Offset(-r * 0.55f, -r * 0.7f)
+        val thumbSize = Size(r * 0.38f, r * 0.8f)
+        drawRoundRect(Coral, thumb, thumbSize, CornerRadius(r * 0.19f))
+        drawRoundRect(Navy, thumb, thumbSize, CornerRadius(r * 0.19f), Stroke(4f))
+        val fist = c + Offset(-r * 0.6f, -r * 0.1f)
+        val fistSize = Size(r * 1.2f, r * 0.75f)
+        drawRoundRect(Coral, fist, fistSize, CornerRadius(r * 0.25f))
+        drawRoundRect(Navy, fist, fistSize, CornerRadius(r * 0.25f), Stroke(4f))
+        for (i in 1..3) { // finger creases
+            val x = fist.x + fistSize.width * i / 4f
+            drawLine(Navy, Offset(x, fist.y + fistSize.height * 0.45f), Offset(x, fist.y + fistSize.height * 0.9f), 3f)
+        }
     }
 }

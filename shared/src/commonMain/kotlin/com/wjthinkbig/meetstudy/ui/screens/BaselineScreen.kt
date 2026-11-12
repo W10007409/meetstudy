@@ -25,8 +25,10 @@ import com.wjthinkbig.meetstudy.domain.BaselineCalibrator
 import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val BASELINE_MS = 3_000L
+private const val BASELINE_GUARD_MS = 6_000L
 
 /** 3-second countdown while frames feed the calibrator; a null result offers a retry. */
 @Composable
@@ -40,6 +42,8 @@ fun BaselineScreen(source: FrameSource, onDone: (Baseline) -> Unit) {
         remaining = 3
         val calibrator = BaselineCalibrator(BASELINE_MS)
         var start: Long? = null
+        // Wall-clock guard: no frames (or a stalled camera) must not hang the screen.
+        val finished = withTimeoutOrNull(BASELINE_GUARD_MS) {
         source.signals.takeWhile { s ->
             val t0 = start ?: s.timeMs.also { start = it }
             calibrator.add(s)
@@ -47,7 +51,8 @@ fun BaselineScreen(source: FrameSource, onDone: (Baseline) -> Unit) {
             remaining = (((BASELINE_MS - elapsed) + 999) / 1000).toInt().coerceIn(0, 3)
             elapsed < BASELINE_MS
         }.collect {}
-        val b = calibrator.result()
+        }
+        val b = if (finished == null) null else calibrator.result()
         if (b != null) onDone(b) else failed = true
     }
 
