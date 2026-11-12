@@ -135,10 +135,13 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                 try {
                     file.outputStream().use { warped.compress(Bitmap.CompressFormat.JPEG, 85, it) }
                 } finally { warped.recycle() }
-                Log.i(TAG, "captured totalMs=${SystemClock.elapsedRealtime() - t0}")
+                Log.i(TAG, "captured src=${bmp.width}x${bmp.height} out=${warped.width}x${warped.height} totalMs=${SystemClock.elapsedRealtime() - t0}")
                 finish(file.path)
             } catch (e: Exception) {
                 Log.w(TAG, "capture failed: " + e.javaClass.simpleName)
+                finish(null)
+            } catch (e: OutOfMemoryError) {
+                Log.w(TAG, "capture failed: OutOfMemoryError")
                 finish(null)
             }
         }
@@ -146,6 +149,9 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
         controller.apply {
             cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             setEnabledUseCases(LifecycleCameraController.IMAGE_ANALYSIS or LifecycleCameraController.IMAGE_CAPTURE)
+            // Output is capped at 1600px anyway; sensor-max capture risks OOM on low-end tablets.
+            imageCaptureResolutionSelector = ResolutionSelector.Builder()
+                .setResolutionStrategy(ResolutionStrategy(Size(1920, 1440), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build()
             imageAnalysisBackpressureStrategy = ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
             // Higher than the default 640x480 so small workbook print stays legible for OCR.
             imageAnalysisResolutionSelector = ResolutionSelector.Builder()
@@ -252,3 +258,5 @@ private fun countChars(text: com.google.mlkit.vision.text.Text, quad: FloatArray
         .filter { e -> e.boundingBox?.let { it.centerX() >= l && it.centerX() <= r && it.centerY() >= t && it.centerY() <= b } == true }
         .sumOf { e -> e.text.count { !it.isWhitespace() } }
 }
+
+actual fun logProof(msg: String) { Log.w(TAG, msg) }

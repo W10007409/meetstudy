@@ -24,6 +24,7 @@ import com.wjthinkbig.meetstudy.data.appFilesDir
 import com.wjthinkbig.meetstudy.domain.StarRules
 import com.wjthinkbig.meetstudy.domain.localDate
 import com.wjthinkbig.meetstudy.platform.PhotoThumbnail
+import com.wjthinkbig.meetstudy.platform.logProof
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
@@ -40,7 +41,7 @@ internal fun ProofSaving(record: SessionRecord, photoPath: String, tz: TimeZone,
                 val store = SessionStore(appFilesDir())
                 val allowed = StarRules.proofStarAllowed(store.starsOn(record.localDate(tz), tz)) && !record.proofStar
                 record.copy(proofStar = allowed || record.proofStar, proofPhotoPath = photoPath).also { store.update(it) }
-            } catch (e: Exception) { null }
+            } catch (e: Exception) { logProof("award save failed: " + e::class.simpleName); null }
         }
         if (updated != null) onSaved(updated) else failed = true
     }
