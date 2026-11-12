@@ -8,6 +8,7 @@ import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SessionStoreTest {
@@ -39,5 +40,10 @@ class SessionStoreTest {
         s.save(rec("a", 0))
         assertEquals(1, s.all().size)
         assertTrue(File(dir).list()!!.any { it.startsWith("sessions.corrupt-") })
+    }
+
+    @Test
+    fun renameFileThrowsWhenItFails() {
+        assertFailsWith<java.io.IOException> { renameFile("$dir/missing.json", "$dir/other.json") }
     }
 }

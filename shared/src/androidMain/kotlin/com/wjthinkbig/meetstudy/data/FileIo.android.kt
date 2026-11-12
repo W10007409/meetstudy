@@ -14,6 +14,7 @@ actual fun writeTextFile(path: String, text: String) {
     Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
 }
 
+// Throws on failure so callers never proceed as if the file had been moved aside.
 actual fun renameFile(from: String, to: String) {
-    File(from).renameTo(File(to))
+    Files.move(File(from).toPath(), File(to).toPath())
 }
