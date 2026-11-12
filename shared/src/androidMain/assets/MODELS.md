@@ -19,3 +19,17 @@
   The app feeds the same crop to both inputs and uses row 0 (128-d, not 192-d).
 - **Note:** our crop is an upright bounding-box crop, not landmark-aligned as in training; similarity values
   are expected to be lower than LFW numbers. Tune `IDENTITY_THRESHOLD` on device.
+
+## efficientdet_lite0.tflite
+
+- **What:** EfficientDet-Lite0 int8 object detector (COCO, 90 label slots) from MediaPipe model storage; used for "cell phone" detection (`PhoneDetector`).
+- **Download URL:** https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite
+- **License:** Apache-2.0 (MediaPipe EfficientDet-Lite0 model card; EfficientDet from google/automl, Apache-2.0).
+- **SHA-256:** `0720bf247bd76e6594ea28fa9c6f7c5242be774818997dbbeffc4da460c723bb`
+- **Input:** `[1, 320, 320, 3]` UINT8 (raw RGB 0..255).
+- **Outputs (read from the interpreter on device):** `[1, 19206, 90]` FLOAT32 class scores (already 0..1) and `[1, 19206, 4]` FLOAT32 box deltas.
+  This is the raw head without NMS; the app only checks whether any anchor scores >= 0.5 for "cell phone" and ignores boxes.
+- **Class index:** the .tflite is also a zip containing `labels.txt` (90 lines, 10 of them `???`, matching the 90 score channels).
+  `cell phone` is line 77, i.e. 0-based index **76** (`person` = 0).
+- **Speed:** Galaxy Tab A8 (R8YW70BEYLZ), 4 threads, bitmap resize + inference: avg ~122 ms (limit 150 ms, see `InferenceBudget`).
+  With 2 threads and nested-array output it was ~290 ms, so keep the direct ByteBuffer output.

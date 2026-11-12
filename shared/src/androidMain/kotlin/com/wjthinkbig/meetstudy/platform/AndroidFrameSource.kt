@@ -98,6 +98,9 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
         val enrolled = FaceVault.load()
         val embedder = enrolled?.let { FaceEmbedder(context.applicationContext) }?.takeIf { it.available }
         val schedule = IdentitySchedule()
+        val phoneDetector = if (enablePhone) PhoneDetector(context.applicationContext) else null
+        var lastPhoneMs: Long? = null
+        var phoneVisible = false
         var lastFrameMs = 0L
         var lastPoseMs = 0L
         var lastPose: PoseReading? = null
@@ -145,7 +148,20 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     val reading = face?.let {
                         FaceReading(it.headEulerAngleY, it.headEulerAngleX, it.leftEyeOpenProbability, it.rightEyeOpenProbability)
                     }
-                    source.flow.tryEmit(toSignals(now, reading, lastPose).copy(identityMatch = identityMatch))
+                    val base = toSignals(now, reading, lastPose)
+                    if (phoneDetector != null && PhoneSchedule.shouldRun(lastPhoneMs, now, base.personVisible, true, phoneDetector.disabled)) {
+                        lastPhoneMs = now
+                        phoneVisible = try {
+                            phoneDetector.detect(uprightBitmap(proxy))
+                        } catch (e: Exception) {
+                            Log.w(TAG, "phone detect failed: " + e.javaClass.simpleName)
+                            false
+                        }
+                        Log.d(TAG, "phone=$phoneVisible avgMs=${phoneDetector.avgInferenceMs}")
+                    }
+                    if (phoneDetector == null || phoneDetector.disabled || !base.personVisible) phoneVisible = false
+                    // ponytail: no hand-proximity check; add MediaPipe HandLandmarker if false positives are common
+                    source.flow.tryEmit(base.copy(identityMatch = identityMatch, phoneVisible = phoneVisible))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
                     Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)
@@ -162,6 +178,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
             executor.shutdown()
             // embedBlocking/close share a lock, so an in-flight embed finishes before the interpreter closes.
             embedder?.close()
+            phoneDetector?.close()
             faceDetector.close()
             poseDetector.close()
         }
@@ -179,11 +196,15 @@ private fun poseReading(pose: Pose): PoseReading? {
     )
 }
 
-/** Upright bounding-box crop scaled to 112x112 (no landmark alignment yet; Task 6 may refine). */
-private fun cropFace(proxy: ImageProxy, box: Rect): FaceCrop? {
+private fun uprightBitmap(proxy: ImageProxy): Bitmap {
     val m = Matrix().apply { postRotate(proxy.imageInfo.rotationDegrees.toFloat()) }
     val src = proxy.toBitmap()
-    val upright = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, false)
+    return Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, false)
+}
+
+/** Upright bounding-box crop scaled to 112x112 (no landmark alignment yet; Task 6 may refine). */
+private fun cropFace(proxy: ImageProxy, box: Rect): FaceCrop? {
+    val upright = uprightBitmap(proxy)
     val c = clipRect(box.left, box.top, box.right, box.bottom, upright.width, upright.height) ?: return null
     val scaled = Bitmap.createScaledBitmap(Bitmap.createBitmap(upright, c[0], c[1], c[2], c[3]), CROP_SIZE, CROP_SIZE, true)
     val px = IntArray(CROP_SIZE * CROP_SIZE)

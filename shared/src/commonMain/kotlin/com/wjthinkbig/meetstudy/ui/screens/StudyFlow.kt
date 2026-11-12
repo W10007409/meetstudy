@@ -24,7 +24,7 @@ private enum class Step { Goal, Identity, Guide, Baseline, Study, Reward }
 /** Setup → study → reward. Owns the single frame source shared by every camera step. */
 @Composable
 fun StudyFlow(onExit: () -> Unit) {
-    val source = rememberFrameSource(enablePhone = false)
+    val source = rememberFrameSource(enablePhone = true)
     var step by remember { mutableStateOf(Step.Goal) }
     var goalMs by remember { mutableStateOf(0L) }
     var baseline by remember { mutableStateOf<Baseline?>(null) }
