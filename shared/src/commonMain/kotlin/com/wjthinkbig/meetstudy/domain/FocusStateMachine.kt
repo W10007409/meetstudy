@@ -8,8 +8,7 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
 
     private var candidate: FocusState? = null
     private var candidateSince = 0L
-    private var interruptKind: FocusState? = null // null = clear frames
-    private var interruptSince: Long? = null
+    private var interruptSince: Long? = null // first frame not matching the candidate, of any kind
     private var clearSince: Long? = null
     private var identityMatch: Boolean? = null
     private var appLeft = false
@@ -34,14 +33,15 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
     }
 
     // Short interruptions (< candidateGraceMs) keep the pending candidate; longer ones replace/drop it.
+    // Mixed non-matching kinds count as one interruption; at grace the latest frame decides:
+    // clear drops the candidate, another kind replaces it with candidateSince = interruption start.
     private fun trackCandidate(c: FocusState?, t: Long) {
         if (candidate == null) {
             if (c != null) { candidate = c; candidateSince = t }
             return
         }
         if (c == candidate) { interruptSince = null; return }
-        if (interruptSince == null || interruptKind != c) { interruptKind = c; interruptSince = t }
-        val since = interruptSince!!
+        val since = interruptSince ?: t.also { interruptSince = it }
         if (t - since >= config.candidateGraceMs) {
             candidate = c
             candidateSince = since
@@ -84,7 +84,9 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
     private fun candidateOf(s: FrameSignals): FocusState? {
         if ((!s.faceVisible && !s.personVisible) || identityMatch == false) return FocusState.AWAY
         if (s.phoneVisible) return FocusState.PHONE
-        val eyesClosed = s.eyesOpenProb?.let { it < config.eyesClosedProb } == true
+        // Eye-open probability drops when the head is bowed over a workbook, so only trust it near baseline pitch.
+        val headBowed = s.pitch?.let { it < baseline.pitch - config.eyesRulePitchDownMaxDeg } == true
+        val eyesClosed = !headBowed && s.eyesOpenProb?.let { it < config.eyesClosedProb } == true
         if (eyesClosed || (!s.faceVisible && s.personVisible && s.noseBelowShoulders == true)) return FocusState.DROWSY
         if (s.faceVisible) {
             val yawOut = s.yaw?.let { abs(it - baseline.yaw) > config.yawLimitDeg } == true

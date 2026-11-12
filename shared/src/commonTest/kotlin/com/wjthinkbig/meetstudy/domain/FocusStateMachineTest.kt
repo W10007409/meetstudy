@@ -1,5 +1,6 @@
 package com.wjthinkbig.meetstudy.domain
 
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -168,5 +169,31 @@ class FocusStateMachineTest {
         assertEquals(FocusState.AWAY, m.state)
         assertNull(m.onFrame(studying(5_500)))
         assertEquals(StateChange(FocusState.STUDYING, 5_500), m.onFrame(studying(7_500)))
+    }
+
+    @Test fun alternatingNonMatchingFramesDropStaleAway() {
+        val m = sm()
+        m.onFrame(noFace(0))
+        val changes = (200L..15_000L step 200).mapNotNull { t ->
+            m.onFrame(if ((t / 200) % 2 == 1L) studying(t) else frame(t, yaw = base.yaw + 36))
+        }
+        assertEquals(emptyList(), changes.filter { it.state == FocusState.AWAY })
+    }
+
+    // Known gap, reported: each 34° frame is a 200ms clear interruption (< 1s grace), so the 36° candidate
+    // survives and fires LOOKING_AWAY at 15.2s. Needs a hysteresis/duty-cycle decision before enabling.
+    @Ignore
+    @Test fun yawFlicker34to36DoesNotFlag() {
+        val m = sm()
+        val changes = (0L..30_000L step 200).mapNotNull { t ->
+            m.onFrame(frame(t, yaw = base.yaw + if ((t / 200) % 2 == 0L) 34 else 36))
+        }
+        assertEquals(emptyList(), changes)
+    }
+
+    @Test fun readingWithHeadBowedIsNotDrowsy() {
+        val m = sm()
+        assertEquals(emptyList(), m.feed(0, 30_000) { frame(it, pitch = base.pitch - 30, eyes = 0.1f) })
+        assertEquals(FocusState.STUDYING, m.state)
     }
 }

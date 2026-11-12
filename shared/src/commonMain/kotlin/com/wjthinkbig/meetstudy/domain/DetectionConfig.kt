@@ -9,6 +9,7 @@ data class DetectionConfig(
     val pitchUpLimitDeg: Float = 25f,
     val pitchDownAllowDeg: Float = 40f,
     val eyesClosedProb: Float = 0.3f,
+    val eyesRulePitchDownMaxDeg: Float = 15f, // eyes-closed rule ignored when head is bowed further than this
     val returnDebounceMs: Long = 2_000,
     val candidateGraceMs: Long = 1_000,
 )
