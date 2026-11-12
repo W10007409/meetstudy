@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.os.SystemClock
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -37,7 +38,10 @@ import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.wjthinkbig.meetstudy.domain.FrameSignals
+import com.google.android.gms.tasks.Task
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,6 +50,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 private const val MIN_FRAME_GAP_MS = 200L
 private const val POSE_GAP_MS = 500L
 private const val CROP_SIZE = 112
+private const val TAG = "MeetStudyFrames"
+
+/** Null on timeout so a stuck detector task cannot block the analyzer thread forever. */
+private fun <T> awaitOrNull(task: Task<T>): T? =
+    try { Tasks.await(task, 1, TimeUnit.SECONDS) } catch (e: TimeoutException) { null }
 
 /** Camera controller shared by the frame source (analysis) and CameraPreview. Null until permission is granted. */
 private var activeController by mutableStateOf<LifecycleCameraController?>(null)
@@ -97,15 +106,20 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     if (now - lastFrameMs < MIN_FRAME_GAP_MS || media == null) return@setImageAnalysisAnalyzer
                     lastFrameMs = now
                     val input = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
-                    val face = Tasks.await(faceDetector.process(input))
-                        .maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
+                    val faces = awaitOrNull(faceDetector.process(input)) ?: return@setImageAnalysisAnalyzer
+                    val face = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
                     if (face != null) {
-                        source.latestFace.value = cropFace(proxy, face.boundingBox)
+                        source.latestFace.value = try {
+                            cropFace(proxy, face.boundingBox)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "crop failed: " + e.javaClass.simpleName)
+                            null
+                        }
                     } else {
                         source.latestFace.value = null
                         if (now - lastPoseMs >= POSE_GAP_MS) {
                             lastPoseMs = now
-                            lastPose = poseReading(Tasks.await(poseDetector.process(input)))
+                            awaitOrNull(poseDetector.process(input))?.let { lastPose = poseReading(it) }
                         }
                     }
                     val reading = face?.let {
@@ -114,6 +128,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     source.flow.tryEmit(toSignals(now, reading, lastPose))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
+                    Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)
                 } finally {
                     proxy.close()
                 }
@@ -147,12 +162,8 @@ private fun cropFace(proxy: ImageProxy, box: Rect): FaceCrop? {
     val m = Matrix().apply { postRotate(proxy.imageInfo.rotationDegrees.toFloat()) }
     val src = proxy.toBitmap()
     val upright = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, false)
-    val x = box.left.coerceIn(0, upright.width - 1)
-    val y = box.top.coerceIn(0, upright.height - 1)
-    val w = box.width().coerceAtMost(upright.width - x)
-    val h = box.height().coerceAtMost(upright.height - y)
-    if (w <= 0 || h <= 0) return null
-    val scaled = Bitmap.createScaledBitmap(Bitmap.createBitmap(upright, x, y, w, h), CROP_SIZE, CROP_SIZE, true)
+    val c = clipRect(box.left, box.top, box.right, box.bottom, upright.width, upright.height) ?: return null
+    val scaled = Bitmap.createScaledBitmap(Bitmap.createBitmap(upright, c[0], c[1], c[2], c[3]), CROP_SIZE, CROP_SIZE, true)
     val px = IntArray(CROP_SIZE * CROP_SIZE)
     scaled.getPixels(px, 0, CROP_SIZE, 0, 0, CROP_SIZE, CROP_SIZE)
     return FaceCrop(CROP_SIZE, px)

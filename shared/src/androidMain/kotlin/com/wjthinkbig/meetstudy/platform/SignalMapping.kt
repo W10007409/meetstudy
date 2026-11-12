@@ -27,3 +27,10 @@ fun toSignals(timeMs: Long, face: FaceReading?, pose: PoseReading?): FrameSignal
         phoneVisible = false,
     )
 }
+
+/** Intersects the box with the bitmap; returns [x, y, width, height] or null if empty. */
+fun clipRect(left: Int, top: Int, right: Int, bottom: Int, w: Int, h: Int): IntArray? {
+    val l = maxOf(left, 0); val t = maxOf(top, 0)
+    val r = minOf(right, w); val b = minOf(bottom, h)
+    return if (r > l && b > t) intArrayOf(l, t, r - l, b - t) else null
+}

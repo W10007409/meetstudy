@@ -40,4 +40,17 @@ class SignalMappingTest {
     @Test fun noPoseYet() {
         assertFalse(toSignals(0, null, null).personVisible)
     }
+
+    @Test fun clipNegativeLeftTopShrinksNotShifts() {
+        assertEquals(listOf(0, 0, 40, 60), clipRect(-10, -20, 40, 60, 100, 100)!!.toList())
+    }
+
+    @Test fun clipRightBottomOverflow() {
+        assertEquals(listOf(80, 90, 20, 10), clipRect(80, 90, 150, 150, 100, 100)!!.toList())
+    }
+
+    @Test fun clipFullyOutsideIsNull() {
+        assertNull(clipRect(-50, -50, -1, 10, 100, 100))
+        assertNull(clipRect(100, 0, 150, 50, 100, 100))
+    }
 }
