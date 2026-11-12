@@ -24,6 +24,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import com.wjthinkbig.meetstudy.platform.loadPhoto
+import com.wjthinkbig.meetstudy.platform.logProof
+import com.wjthinkbig.meetstudy.ui.components.ShareCardPxHeight
+import com.wjthinkbig.meetstudy.ui.components.ShareCardPxWidth
+import com.wjthinkbig.meetstudy.ui.components.ShareCardDensity
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.unit.dp
@@ -42,7 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val PreviewScale = 0.6f
+private val PreviewWidth = 216.dp
 
 @Composable
 fun ShareSheet(record: SessionRecord, starsToday: Int, onDismiss: () -> Unit) {
@@ -50,25 +60,38 @@ fun ShareSheet(record: SessionRecord, starsToday: Int, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    // Decode the proof photo first so the PNG can never be captured without it; a failed decode shares the card photo-less.
+    var photo by remember { mutableStateOf<ImageBitmap?>(null) }
+    var photoReady by remember { mutableStateOf(record.proofPhotoPath == null) }
+    LaunchedEffect(record.proofPhotoPath) {
+        val path = record.proofPhotoPath ?: return@LaunchedEffect
+        photo = try { loadPhoto(path) } catch (e: CancellationException) { throw e } catch (e: Exception) { null }
+        photoReady = true
+    }
+    val previewScale = PreviewWidth.value * LocalDensity.current.density / ShareCardPxWidth
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier.background(Color.White, RoundedCornerShape(24.dp)).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // The scale sits outside the recording, so the PNG is the card at its full design size.
-            Box(Modifier.size(ShareCardWidth * PreviewScale, ShareCardHeight * PreviewScale), contentAlignment = Alignment.Center) {
-                ShareCard(
-                    record, starsToday,
-                    Modifier.requiredSize(ShareCardWidth, ShareCardHeight).scale(PreviewScale)
-                        .drawWithContent { layer.record { this@drawWithContent.drawContent() }; drawLayer(layer) },
-                )
+            // The card is laid out at a fixed 3x density (1080x1350 px). The preview scale sits outside the recording,
+            // so the PNG stays full size while the on-screen preview takes a fixed real-dp box.
+            Box(Modifier.size(PreviewWidth, PreviewWidth * 1.25f), contentAlignment = Alignment.Center) {
+                CompositionLocalProvider(LocalDensity provides Density(ShareCardDensity, 1f)) {
+                    ShareCard(
+                        record, starsToday, photo,
+                        Modifier.requiredSize(ShareCardWidth, ShareCardHeight).scale(previewScale)
+                            .drawWithContent { layer.record { this@drawWithContent.drawContent() }; drawLayer(layer) },
+                    )
+                }
             }
-            Button(enabled = !busy, onClick = {
+            Button(enabled = photoReady && !busy, onClick = {
                 busy = true; failed = false
                 scope.launch {
                     try {
                         val bmp = layer.toImageBitmap()
+                        if (bmp.width != ShareCardPxWidth || bmp.height != ShareCardPxHeight) logProof("share card size ${bmp.width}x${bmp.height}, expected 1080x1350")
                         withContext(Dispatchers.Default) {
                             shareImage(bmp.encodePng(), shareText(buildReport(record.segments).focusedMs, starsToday))
                         }
@@ -76,7 +99,7 @@ fun ShareSheet(record: SessionRecord, starsToday: Int, onDismiss: () -> Unit) {
                     busy = false
                 }
             }) { Text("이미지로 공유", fontSize = 18.sp) }
-            if (busy) CircularProgressIndicator(Modifier.size(28.dp))
+            if (busy || !photoReady) CircularProgressIndicator(Modifier.size(28.dp))
             if (failed) Text("공유 준비에 실패했어요", fontSize = 14.sp, color = Color(0xFFD32F2F))
             OutlinedButton(onClick = {}, enabled = false) { Text("선생님에게 보내기") }
             OutlinedButton(onClick = {}, enabled = false) { Text("보호자에게 링크 보내기") }

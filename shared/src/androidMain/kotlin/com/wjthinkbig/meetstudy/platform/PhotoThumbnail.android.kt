@@ -10,6 +10,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+actual suspend fun decodePhoto(path: String): ImageBitmap? = withContext(Dispatchers.IO) {
+    BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap()
+}
+
 @Composable
 actual fun PhotoThumbnail(path: String, modifier: Modifier) {
     val bmp = produceState<ImageBitmap?>(null, path) {
