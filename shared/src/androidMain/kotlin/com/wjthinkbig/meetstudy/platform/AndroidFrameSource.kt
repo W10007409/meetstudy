@@ -126,9 +126,10 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                             null
                         }
                         source.latestFace.value = crop
-                        if (embedder != null && enrolled != null && crop != null && schedule.due(now)) {
-                            schedule.checked(now)
-                            identityMatch = try {
+                        if (embedder != null && enrolled != null && crop != null &&
+                            schedule.due(now, face.headEulerAngleY, face.headEulerAngleX)
+                        ) {
+                            val match = try {
                                 val sim = cosine(embedder.embedBlocking(crop), enrolled)
                                 Log.i(FACE_TAG, "similarity=$sim")
                                 sim >= IDENTITY_THRESHOLD
@@ -136,6 +137,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                                 Log.w(FACE_TAG, "embed failed: " + e.javaClass.simpleName)
                                 null
                             }
+                            identityMatch = schedule.result(now, match)
                         }
                     } else {
                         source.latestFace.value = null
