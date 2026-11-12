@@ -12,6 +12,8 @@ mlkit-pose = "18.0.0-beta5"
 lifecycle = "2.9.4"
 jb-lifecycle = "2.9.6"
 litert = "2.2.0"
+mlkit-text = "16.0.1"
+opencv = "4.10.0"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -26,6 +28,8 @@ mlkit-pose = { module = "com.google.mlkit:pose-detection", version.ref = "mlkit-
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 jb-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jb-lifecycle" }
 
+mlkit-text-korean = { module = "com.google.mlkit:text-recognition-korean", version.ref = "mlkit-text" }
+opencv = { module = "org.opencv:opencv", version.ref = "opencv" }
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 
 [plugins]

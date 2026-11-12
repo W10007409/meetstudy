@@ -25,24 +25,30 @@ import com.wjthinkbig.meetstudy.data.SessionRecord
 import com.wjthinkbig.meetstudy.domain.Baseline
 import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
 import com.wjthinkbig.meetstudy.ui.todayIn
+import com.wjthinkbig.meetstudy.platform.ProofCamera
 import com.wjthinkbig.meetstudy.platform.rememberFrameSource
 
-private enum class Step { Goal, Identity, Guide, Baseline, Study, Reward, Proof, Report }
+private enum class Step { Goal, Identity, Guide, Baseline, Study, Reward, Proof, ProofDone, Report }
 
-/** Setup → study → reward. Owns the single frame source shared by every camera step. */
+/** Setup → study → reward → proof. The single front frame source lives only in Identity..Study; Proof uses the rear camera alone. */
 @Composable
 fun StudyFlow(onExit: () -> Unit) {
-    val source = rememberFrameSource(enablePhone = true)
     var step by remember { mutableStateOf(Step.Goal) }
     var goalMs by remember { mutableStateOf(0L) }
     var baseline by remember { mutableStateOf<Baseline?>(null) }
     var record by remember { mutableStateOf<SessionRecord?>(null) }
     var history by remember { mutableStateOf<List<SessionRecord>>(emptyList()) }
+    var loadedFor by remember { mutableStateOf<SessionRecord?>(null) } // record whose history load finished
+    var photoPath by remember { mutableStateOf<String?>(null) }
     val tz = remember { TimeZone.currentSystemDefault() }
     val today = remember { todayIn(tz) }
     // Store read happens off the main thread whenever we land on Reward (the record was saved just before).
     LaunchedEffect(step == Step.Reward) {
-        if (step == Step.Reward) history = withContext(Dispatchers.Default) { SessionStore(appFilesDir()).all() }
+        if (step == Step.Reward) {
+            val r = record
+            history = withContext(Dispatchers.Default) { SessionStore(appFilesDir()).all() }
+            loadedFor = r
+        }
     }
 
     // Back = previous setup step. Guide goes back to Goal (not Identity: the check only re-runs when the face reappears).
@@ -53,25 +59,32 @@ fun StudyFlow(onExit: () -> Unit) {
             Step.Identity, Step.Guide -> step = Step.Goal
             Step.Baseline -> step = Step.Guide
             Step.Study, Step.Reward -> onExit()
-            Step.Proof, Step.Report -> step = Step.Reward
+            Step.Proof, Step.ProofDone, Step.Report -> step = Step.Reward
         }
     }
 
     when (step) {
         Step.Goal -> GoalSetupScreen { goalMs = it; step = Step.Identity }
-        Step.Identity -> IdentityCheckScreen(source) { step = Step.Guide }
-        Step.Guide -> PlacementGuideScreen(source) { step = Step.Baseline }
-        Step.Baseline -> BaselineScreen(source) { baseline = it; step = Step.Study }
-        Step.Study -> StudyScreen(source, goalMs, checkNotNull(baseline)) { record = it; step = Step.Reward }
+        Step.Identity, Step.Guide, Step.Baseline, Step.Study -> {
+            val source = rememberFrameSource(enablePhone = true)
+            when (step) {
+                Step.Identity -> IdentityCheckScreen(source) { step = Step.Guide }
+                Step.Guide -> PlacementGuideScreen(source) { step = Step.Baseline }
+                Step.Baseline -> BaselineScreen(source) { baseline = it; step = Step.Study }
+                else -> StudyScreen(source, goalMs, checkNotNull(baseline)) { record = it; step = Step.Reward }
+            }
+        }
         Step.Reward -> {
             val r = checkNotNull(record)
-            RewardScreen(r, history.filter { it.localDate(tz) == today }.sumOf { it.stars() }, { step = Step.Proof }, { step = Step.Report }, onExit)
+            RewardScreen(r, history.filter { it.localDate(tz) == today }.sumOf { it.stars() }, loadedFor == r, { photoPath = null; step = Step.Proof }, { step = Step.Report }, onExit)
         }
-        // ponytail: Task 11 replaces this with the workbook-proof camera.
-        Step.Proof -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)) {
-            Text("문제집 인증은 다음 단계에서 열려요", fontSize = 28.sp)
-            BigButton("돌아가기", enabled = true) { step = Step.Reward }
+        Step.Proof -> {
+            val r = checkNotNull(record)
+            val path = photoPath
+            if (path == null) ProofCamera(r.id, { photoPath = it }, { step = Step.Reward })
+            else ProofSaving(r, path, tz) { record = it; step = Step.ProofDone }
         }
+        Step.ProofDone -> ProofDoneScreen(checkNotNull(record), { step = Step.Report }, onExit)
         Step.Report -> ReportScreen(checkNotNull(record), history, tz, today) { step = Step.Reward }
     }
 }

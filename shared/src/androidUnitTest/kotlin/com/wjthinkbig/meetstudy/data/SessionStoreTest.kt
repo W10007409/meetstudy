@@ -46,4 +46,13 @@ class SessionStoreTest {
     fun renameFileThrowsWhenItFails() {
         assertFailsWith<java.io.IOException> { renameFile("$dir/missing.json", "$dir/other.json") }
     }
+
+    @Test
+    fun updateReplacesById() {
+        val s = SessionStore(dir)
+        s.save(rec("a", 0)); s.save(rec("b", 5000))
+        s.update(rec("a", 0, proof = true))
+        assertEquals(listOf(rec("a", 0, proof = true), rec("b", 5000)), s.all())
+        assertFailsWith<IllegalStateException> { s.update(rec("zz", 1)) }
+    }
 }

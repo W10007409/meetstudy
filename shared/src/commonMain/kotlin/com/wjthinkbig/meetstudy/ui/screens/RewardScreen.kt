@@ -27,7 +27,7 @@ import com.wjthinkbig.meetstudy.domain.StarRules
 import kotlinx.coroutines.delay
 
 @Composable
-fun RewardScreen(record: SessionRecord, starsToday: Int, onProof: () -> Unit, onReport: () -> Unit, onHome: () -> Unit) {
+fun RewardScreen(record: SessionRecord, starsToday: Int, historyLoaded: Boolean, onProof: () -> Unit, onReport: () -> Unit, onHome: () -> Unit) {
     val focused = record.segments.filter { it.state == FocusState.STUDYING }.sumOf { it.endMs - it.startMs }
     val canProof = StarRules.proofStarAllowed(starsToday) && !record.proofStar
     Column(
@@ -42,11 +42,14 @@ fun RewardScreen(record: SessionRecord, starsToday: Int, onProof: () -> Unit, on
             }
         } else {
             Text("오늘은 여기까지!", fontSize = 40.sp)
-            Text("인증하면 별을 받을 수 있어요", fontSize = 22.sp, textAlign = TextAlign.Center)
+            if (record.proofStar) {
+                PopStar(0)
+                Text("인증 완료! 별 1개를 받았어요", fontSize = 22.sp, textAlign = TextAlign.Center)
+            } else Text("인증하면 별을 받을 수 있어요", fontSize = 22.sp, textAlign = TextAlign.Center)
         }
         Text("순공부 ${formatDuration(focused)}", fontSize = 24.sp)
-        BigButton(if (canProof) "공부 인증하고 별 더 받기" else "오늘 별은 다 모았어요", enabled = canProof, onClick = onProof)
-        OutlinedButton(onClick = onReport) { Text("리포트 보기", fontSize = 20.sp) }
+        BigButton(if (canProof) "공부 인증하고 별 더 받기" else "오늘 별은 다 모았어요", enabled = canProof && historyLoaded, onClick = onProof)
+        OutlinedButton(onClick = onReport, enabled = historyLoaded) { Text("리포트 보기", fontSize = 20.sp) }
         TextButton(onClick = onHome) { Text("홈으로", fontSize = 16.sp) }
     }
 }

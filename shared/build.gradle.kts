@@ -31,6 +31,8 @@ kotlin {
             implementation(libs.mlkit.face)
             implementation(libs.mlkit.pose)
             implementation(libs.litert)
+            implementation(libs.mlkit.text.korean)
+            implementation(libs.opencv)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

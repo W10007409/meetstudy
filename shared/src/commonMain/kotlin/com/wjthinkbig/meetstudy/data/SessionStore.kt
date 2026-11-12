@@ -16,13 +16,21 @@ class SessionStore(private val dir: String) {
     /** Empty if missing or corrupt; check [load] for the distinction. */
     fun all(): List<SessionRecord> = load() ?: emptyList()
 
-    fun save(r: SessionRecord) {
+    fun save(r: SessionRecord) = write { it + r }
+
+    /** Replaces the record with the same id; throws if none exists. */
+    fun update(r: SessionRecord) = write { cur ->
+        check(cur.any { it.id == r.id }) { "no record with id ${r.id}" }
+        cur.map { if (it.id == r.id) r else it }
+    }
+
+    private fun write(change: (List<SessionRecord>) -> List<SessionRecord>) {
         val current = load() ?: run {
             // Corrupt file: quarantine it rather than overwrite user data.
             renameFile(path, "$dir/sessions.corrupt-${nowMs()}.json")
             emptyList()
         }
-        writeTextFile(path, json.encodeToString(serializer, current + r))
+        writeTextFile(path, json.encodeToString(serializer, change(current)))
     }
 
     fun starsOn(date: LocalDate, tz: TimeZone): Int =
