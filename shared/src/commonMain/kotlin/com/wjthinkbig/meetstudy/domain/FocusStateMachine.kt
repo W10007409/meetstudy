@@ -52,6 +52,8 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
     fun setAppLeft(left: Boolean, timeMs: Long): StateChange? { appLeft = left; return applyOverrides(timeMs) }
     fun setBreak(onBreak: Boolean, timeMs: Long): StateChange? { this.onBreak = onBreak; return applyOverrides(timeMs) }
 
+    fun forceAway(timeMs: Long): StateChange = enter(FocusState.AWAY, timeMs)
+
     // Precedence APP_LEFT > BREAK; STUDYING only when both are off.
     private fun applyOverrides(t: Long): StateChange? {
         val target = when {

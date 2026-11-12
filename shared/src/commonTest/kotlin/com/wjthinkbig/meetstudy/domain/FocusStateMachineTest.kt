@@ -161,4 +161,12 @@ class FocusStateMachineTest {
         assertEquals(FocusState.APP_LEFT, m.state)
         assertEquals(StateChange(FocusState.STUDYING, 3_000), m.setAppLeft(false, 3_000))
     }
+
+    @Test fun forceAwayEntersAwayAndReturnsAfterDebounce() {
+        val m = sm()
+        assertEquals(StateChange(FocusState.AWAY, 5_000), m.forceAway(5_000))
+        assertEquals(FocusState.AWAY, m.state)
+        assertNull(m.onFrame(studying(5_500)))
+        assertEquals(StateChange(FocusState.STUDYING, 5_500), m.onFrame(studying(7_500)))
+    }
 }
