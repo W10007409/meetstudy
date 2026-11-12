@@ -18,3 +18,8 @@ actual fun writeTextFile(path: String, text: String) {
 actual fun renameFile(from: String, to: String) {
     Files.move(File(from).toPath(), File(to).toPath())
 }
+
+/** Set by FaceVault.init, which the Activity calls before any composition. */
+internal var appContext: android.content.Context? = null
+
+actual fun appFilesDir(): String = checkNotNull(appContext) { "FaceVault.init not called" }.filesDir.path

@@ -23,6 +23,7 @@ actual object FaceVault {
     /** Call once from the Activity before any composition. */
     fun init(context: Context) {
         prefs = context.applicationContext.getSharedPreferences(ALIAS, Context.MODE_PRIVATE)
+        com.wjthinkbig.meetstudy.data.appContext = context.applicationContext
     }
 
     private fun requirePrefs() = checkNotNull(prefs) { "FaceVault.init not called" }

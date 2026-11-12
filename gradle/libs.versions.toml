@@ -10,6 +10,7 @@ camerax = "1.4.1"
 mlkit-face = "16.1.7"
 mlkit-pose = "18.0.0-beta5"
 lifecycle = "2.9.4"
+jb-lifecycle = "2.9.6"
 litert = "2.2.0"
 
 [libraries]
@@ -23,6 +24,7 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 mlkit-face = { module = "com.google.mlkit:face-detection", version.ref = "mlkit-face" }
 mlkit-pose = { module = "com.google.mlkit:pose-detection", version.ref = "mlkit-pose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+jb-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jb-lifecycle" }
 
 litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 

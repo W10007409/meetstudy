@@ -8,3 +8,6 @@ expect fun writeTextFile(path: String, text: String)
 
 /** Renames a file (used to quarantine corrupt data). */
 expect fun renameFile(from: String, to: String)
+
+/** App-private directory for persistent data (session records). */
+expect fun appFilesDir(): String
