@@ -145,8 +145,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     val reading = face?.let {
                         FaceReading(it.headEulerAngleY, it.headEulerAngleX, it.leftEyeOpenProbability, it.rightEyeOpenProbability)
                     }
-                    // Epoch ms, not elapsedRealtime: StudySession segments become SessionRecord times (local-date star rules).
-                    source.flow.tryEmit(toSignals(System.currentTimeMillis(), reading, lastPose).copy(identityMatch = identityMatch))
+                    source.flow.tryEmit(toSignals(now, reading, lastPose).copy(identityMatch = identityMatch))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
                     Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)

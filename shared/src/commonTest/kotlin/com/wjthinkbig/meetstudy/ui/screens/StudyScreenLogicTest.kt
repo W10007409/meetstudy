@@ -1,6 +1,7 @@
 package com.wjthinkbig.meetstudy.ui.screens
 
 import com.wjthinkbig.meetstudy.domain.FocusState
+import com.wjthinkbig.meetstudy.domain.Segment
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -43,5 +44,21 @@ class StudyScreenLogicTest {
         assertFalse(s.faceVisible)
         assertFalse(s.personVisible)
         assertFalse(s.phoneVisible)
+    }
+
+    @Test fun segmentsShiftToEpochKeepingDurations() {
+        val mono = listOf(
+            Segment(FocusState.STUDYING, 1_000, 4_000),
+            Segment(FocusState.AWAY, 4_000, 9_500),
+        )
+        val epoch = toEpoch(mono, offsetMs = 1_794_000_000_000 - 1_000)
+        assertEquals(
+            listOf(
+                Segment(FocusState.STUDYING, 1_794_000_000_000, 1_794_000_003_000),
+                Segment(FocusState.AWAY, 1_794_000_003_000, 1_794_000_008_500),
+            ),
+            epoch,
+        )
+        assertEquals(mono.map { it.endMs - it.startMs }, epoch.map { it.endMs - it.startMs })
     }
 }

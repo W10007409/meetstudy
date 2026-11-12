@@ -50,6 +50,7 @@ import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import com.wjthinkbig.meetstudy.platform.KeepScreenOn
 import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
+import com.wjthinkbig.meetstudy.platform.monotonicNowMs
 import com.wjthinkbig.meetstudy.ui.theme.OfflineColor
 import com.wjthinkbig.meetstudy.ui.theme.stateColor
 import com.wjthinkbig.meetstudy.ui.theme.stateLabel
@@ -65,9 +66,12 @@ import kotlin.uuid.Uuid
 private const val STALE_MS = 3_000L
 private val BREAK_MS = BreakPolicy().maxMinutesEach * 60_000L
 
-/** Epoch ms: the same clock AndroidFrameSource stamps frames with. */
 @OptIn(ExperimentalTime::class)
-internal fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
+private fun nowEpochMs(): Long = Clock.System.now().toEpochMilliseconds()
+
+/** Session timing runs on the monotonic clock (wall-clock jumps can't fake study time); records need epoch ms. */
+internal fun toEpoch(segments: List<Segment>, offsetMs: Long): List<Segment> =
+    segments.map { it.copy(startMs = it.startMs + offsetMs, endMs = it.endMs + offsetMs) }
 
 /** "mm:ss" under an hour, "h:mm:ss" from an hour (or "hh:mm:ss" with [alwaysHours]); negatives show as zero. */
 internal fun formatClock(ms: Long, alwaysHours: Boolean = false): String {
@@ -91,7 +95,8 @@ internal fun syntheticFrame(timeMs: Long) = FrameSignals(
     eyesOpenProb = null, personVisible = false, noseBelowShoulders = null, phoneVisible = false,
 )
 
-private class Ended(val segments: List<Segment>, val endMs: Long, val goalReached: Boolean)
+/** [endMs] and [segments] are monotonic; [id] is fixed per session so retries can't create a second record. */
+private class Ended(val id: String, val segments: List<Segment>, val endMs: Long, val goalReached: Boolean)
 
 /** Plain holder so 5 Hz frames don't recompose the screen. */
 private class FrameWatch(var lastRealMs: Long)
@@ -99,7 +104,8 @@ private class FrameWatch(var lastRealMs: Long)
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 @Composable
 fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinished: (SessionRecord) -> Unit) {
-    val startMs = remember { nowEpochMs() }
+    val startMs = remember { monotonicNowMs() }
+    val startEpochMs = remember { nowEpochMs() }
     val session = remember { StudySession(goalMs, startMs, FocusStateMachine(baseline)) }
     val store = remember { SessionStore(appFilesDir()) }
     val watch = remember { FrameWatch(startMs) }
@@ -108,32 +114,36 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     var breakStartMs by remember { mutableLongStateOf(0L) }
     var ended by remember { mutableStateOf<Ended?>(null) }
     var saveFailed by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
 
     // Segments live in [ended] until a save succeeds, so a failed write never loses the session.
     fun save(e: Ended) {
-        try {
+        if (saving) return
+        saving = true
+        val offset = startEpochMs - startMs
+        val saved = try {
             val tz = TimeZone.currentSystemDefault()
-            val day = Instant.fromEpochMilliseconds(startMs).toLocalDateTime(tz).date // the record is filed under its start date
-            val r = SessionRecord(
-                id = Uuid.random().toString(), startMs = startMs, endMs = e.endMs, goalMs = goalMs,
-                segments = e.segments,
+            val day = Instant.fromEpochMilliseconds(startEpochMs).toLocalDateTime(tz).date // the record is filed under its start date
+            SessionRecord(
+                id = e.id, startMs = startEpochMs, endMs = e.endMs + offset, goalMs = goalMs,
+                segments = toEpoch(e.segments, offset),
                 goalStar = StarRules.goalStarAllowed(e.goalReached, store.starsOn(day, tz)),
                 proofStar = false, proofPhotoPath = null,
-            )
-            store.save(r)
-            saveFailed = false
-            onFinished(r)
+            ).also { store.save(it) }
         } catch (ex: Exception) {
-            saveFailed = true
+            null
         }
+        saving = false
+        saveFailed = saved == null
+        if (saved != null) onFinished(saved)
     }
 
     fun end() {
         if (ended != null) return
-        val t = nowEpochMs()
+        val t = monotonicNowMs()
         val reached = session.isGoalReached(t)
-        val e = Ended(session.finish(t), t, reached)
+        val e = Ended(Uuid.random().toString(), session.finish(t), t, reached)
         ended = e
         save(e)
     }
@@ -151,7 +161,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
 
     LaunchedEffect(Unit) {
         while (ended == null) {
-            val t = nowEpochMs()
+            val t = monotonicNowMs()
             session.tick(t)
             if (shouldFeedSynthetic(watch.lastRealMs, t, session.state.value)) session.onFrame(syntheticFrame(t))
             now = t
@@ -161,10 +171,10 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     }
 
     // The camera stops in the background too; give it the 3 s grace again on return.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (ended == null) session.onAppLeft(true, nowEpochMs()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (ended == null) session.onAppLeft(true, monotonicNowMs()) }
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
         if (ended == null) {
-            val t = nowEpochMs()
+            val t = monotonicNowMs()
             watch.lastRealMs = t
             session.onAppLeft(false, t)
         }
@@ -178,7 +188,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
         ) {
             if (saveFailed) {
                 Text("기록 저장에 실패했어요", fontSize = 28.sp)
-                BigButton("다시 시도", enabled = true) { ended?.let(::save) }
+                BigButton("다시 시도", enabled = !saving) { ended?.let(::save) }
             } else {
                 Text("저장하는 중…", fontSize = 24.sp)
             }
@@ -226,7 +236,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Button(
                 onClick = {
-                    val t = nowEpochMs()
+                    val t = monotonicNowMs()
                     if (onBreak) session.endBreak(t)
                     else if (session.startBreak(t)) breakStartMs = t
                     now = t
