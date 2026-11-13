@@ -1,0 +1,36 @@
+/* Values from docs/superpowers/specs/2026-11-13-teacher-web/teacher-room.html */
+.room { padding: 24px 28px 40px; }
+.room h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.room .muted { color: var(--ink-2); }
+.room .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.room .head p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button { font-size: 14px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+.actions .primary { background: var(--teal); border-color: var(--teal); color: #fff; font-weight: 600; }
+.actions .danger { color: var(--danger); }
+.actions .danger-fill { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+.room .pulse { display: flex; gap: 22px; flex-wrap: wrap; margin: 0 0 18px; font-size: 14px; color: var(--ink-2); min-height: 24px; }
+.room .pulse b { color: var(--ink); font-size: 20px; margin-right: 4px; font-variant-numeric: tabular-nums; }
+.room .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.room .tile { background: var(--sheet); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 0 var(--rule), 0 10px 28px -20px rgba(24, 33, 43, .3); cursor: pointer; }
+.room .tile .video { aspect-ratio: 16/10; background: #222B33; display: grid; place-items: center; color: #6E7A86; font-size: 13px; }
+.room .tile .body { padding: 12px 14px 14px; }
+.room .tile .name { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.room .tile .name b { font-size: 16px; }
+.room .tile .time { font-size: 13px; color: var(--ink-2); margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+.room .tile .time b { color: var(--ink); font-size: 15px; }
+.room .tile.away .video { box-shadow: inset 0 0 0 3px var(--away); }
+.room .tile.off .video { box-shadow: inset 0 0 0 3px var(--off); }
+.room .tile.offline .video { background: #2C2326; color: #C7898E; box-shadow: none; }
+.room .empty { border: 1.5px dashed #CBD3D0; border-radius: 16px; color: var(--ink-3); font-size: 14px; min-height: 220px; background: none; cursor: pointer; }
+.room .empty:hover { color: var(--teal); border-color: var(--teal); }
+.room .sub { font-size: 16px; margin: 8px 0; }
+.room .joined { padding-left: 18px; line-height: 2; }
+.room .joined a { color: var(--teal); }
+.scrim { position: fixed; inset: 0; background: rgba(24, 33, 43, .35); display: grid; place-items: center; padding: 16px; z-index: 10; }
+.dialog { background: var(--sheet); border-radius: 18px; padding: 24px; width: min(420px, 100%); }
+.dialog h2 { margin: 0 0 8px; font-size: 18px; }
+.dialog p { margin: 0 0 20px; color: var(--ink-2); }
+.dialog .actions { justify-content: flex-end; }
+@media (max-width: 1100px) { .room .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .room { padding: 20px 16px 32px; } .room .grid { grid-template-columns: minmax(0, 1fr); } }
