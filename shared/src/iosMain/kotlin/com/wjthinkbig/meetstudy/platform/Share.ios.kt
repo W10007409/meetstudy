@@ -6,6 +6,7 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIImage
+import platform.UIKit.popoverPresentationController
 
 actual fun ImageBitmap.encodePng(): ByteArray =
     checkNotNull(Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)) { "png encode failed" }.bytes

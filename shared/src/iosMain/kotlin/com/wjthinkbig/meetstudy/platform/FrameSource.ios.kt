@@ -41,6 +41,7 @@ import platform.AVFoundation.AVCaptureVideoPreviewLayer
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVMediaTypeVideo
 import platform.AVFoundation.authorizationStatusForMediaType
+import platform.AVFoundation.defaultDeviceWithDeviceType
 import platform.AVFoundation.requestAccessForMediaType
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
@@ -61,7 +62,6 @@ import platform.Vision.VNHumanBodyPoseObservationJointNameNose
 import platform.Vision.VNHumanBodyPoseObservationJointNameRightShoulder
 import platform.Vision.VNImageRequestHandler
 import platform.darwin.NSObject
-import platform.darwin.QOS_CLASS_USER_INITIATED
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_global_queue
 import platform.darwin.dispatch_get_main_queue
@@ -85,7 +85,7 @@ private class IosFrameSource : FrameSource {
     override val latestFace = MutableStateFlow<FaceCrop?>(null) // stays null: no identity model on iOS
 }
 
-private fun background(block: () -> Unit) = dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED.toLong(), 0u), block)
+private fun background(block: () -> Unit) = dispatch_async(dispatch_get_global_queue(0L, 0u), block)
 
 // ponytail: enablePhone is ignored, phone detection needs the TFLite EfficientDet model on iOS.
 @Composable

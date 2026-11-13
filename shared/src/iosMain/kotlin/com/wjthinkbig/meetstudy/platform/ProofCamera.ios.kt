@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import com.wjthinkbig.meetstudy.data.appFilesDir
 import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
+import platform.Foundation.writeToFile
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.VisionKit.VNDocumentCameraScan
 import platform.VisionKit.VNDocumentCameraViewController
