@@ -1,4 +1,4 @@
-# MeetStudy 학생앱 (iOS)
+# MEET TIME 학생앱 (iOS)
 
 Compose Multiplatform 화면(`shared`)을 그대로 띄우는 iOS 앱입니다. iOS 15 이상, Apple Silicon Mac에서 빌드합니다.
 

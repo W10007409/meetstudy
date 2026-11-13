@@ -80,7 +80,7 @@ private fun Home(onStart: () -> Unit, onReEnroll: () -> Unit, onHistory: (Report
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
-        Text("MeetStudy", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Text("MEET TIME", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         Text("오늘도 같이 집중해 볼까요?", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         BigButton("공부 시작하기", modifier = Modifier.padding(top = 24.dp).height(88.dp), onClick = onStart)
         SoftButton("내 기록", onClick = {

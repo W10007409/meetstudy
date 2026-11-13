@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 @OptIn(kotlin.time.ExperimentalTime::class)
 class ShareCardTest {
     @Test fun shareTextUsesMinutesAndStars() {
-        assertEquals("오늘 MeetStudy로 26분 공부했어요! ★2", shareText(26 * 60_000L, 2))
+        assertEquals("오늘 MEET TIME으로 26분 공부했어요! ★2", shareText(26 * 60_000L, 2))
     }
 
     @Test fun dateLabelIsLocalWithWeekday() {

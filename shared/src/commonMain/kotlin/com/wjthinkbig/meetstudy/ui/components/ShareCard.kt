@@ -48,7 +48,7 @@ const val ShareCardPxHeight = 1350
 val ShareCardWidth = 360.dp
 val ShareCardHeight = 450.dp
 
-fun shareText(focusedMs: Long, stars: Int) = "오늘 MeetStudy로 ${focusedMs / 60_000}분 공부했어요! ★$stars"
+fun shareText(focusedMs: Long, stars: Int) = "오늘 MEET TIME으로 ${focusedMs / 60_000}분 공부했어요! ★$stars"
 
 @OptIn(ExperimentalTime::class)
 fun cardDateLabel(epochMs: Long, tz: TimeZone): String {
@@ -86,7 +86,7 @@ fun ShareCard(record: SessionRecord, starsToday: Int, photo: ImageBitmap?, modif
                 photo?.let {
                     Image(it, null, Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Fit)
                 }
-                Text("MeetStudy", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Mint)
+                Text("MEET TIME", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Mint)
             }
         }
     }
