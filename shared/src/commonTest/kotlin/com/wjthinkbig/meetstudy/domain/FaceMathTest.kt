@@ -23,4 +23,11 @@ class FaceMathTest {
         val norm = sqrt(avg.fold(0f) { s, x -> s + x * x })
         assertTrue(abs(norm - 1f) < 1e-5f)
     }
+
+    @Test
+    fun eyeAspectMapsClosedToZeroAndOpenToOne() {
+        assertTrue(eyeOpenFromAspect(0.05f) == 0f)
+        assertTrue(eyeOpenFromAspect(0.35f) == 1f)
+        assertTrue(eyeOpenFromAspect(0.185f) in 0.4f..0.6f)
+    }
 }

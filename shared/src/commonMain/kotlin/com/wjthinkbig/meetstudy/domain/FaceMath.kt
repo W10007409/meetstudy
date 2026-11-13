@@ -12,6 +12,12 @@ fun cosine(a: FloatArray, b: FloatArray): Float {
     return if (d == 0f) 0f else dot / d
 }
 
+/**
+ * Eye-open probability from the eye contour's height / width, for platforms without an eye-open classifier (iOS Vision).
+ * ponytail: 0.12 closed / 0.25 open are textbook eye-aspect values; tune on device if eyes-closed fires wrongly.
+ */
+fun eyeOpenFromAspect(aspect: Float): Float = ((aspect - 0.12f) / (0.25f - 0.12f)).coerceIn(0f, 1f)
+
 private fun normalized(v: FloatArray): FloatArray {
     val n = sqrt(v.fold(0f) { s, x -> s + x * x })
     return if (n == 0f) v.copyOf() else FloatArray(v.size) { v[it] / n }

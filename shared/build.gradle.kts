@@ -8,10 +8,17 @@ plugins {
 
 kotlin {
     androidTarget()
-    iosArm64()
-    iosSimulatorArm64()
+    listOf(iosArm64(), iosSimulatorArm64()).forEach {
+        it.binaries.framework { baseName = "Shared"; isStatic = true }
+    }
 
     sourceSets {
+        all {
+            if (name.startsWith("ios")) {
+                languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
+                languageSettings.optIn("kotlinx.cinterop.BetaInteropApi")
+            }
+        }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)

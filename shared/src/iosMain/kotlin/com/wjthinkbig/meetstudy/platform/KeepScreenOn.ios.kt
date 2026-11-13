@@ -1,6 +1,13 @@
 package com.wjthinkbig.meetstudy.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import platform.UIKit.UIApplication
 
 @Composable
-actual fun KeepScreenOn() {} // iOS: phase 4 (UIApplication.idleTimerDisabled)
+actual fun KeepScreenOn() {
+    DisposableEffect(Unit) {
+        UIApplication.sharedApplication.idleTimerDisabled = true
+        onDispose { UIApplication.sharedApplication.idleTimerDisabled = false }
+    }
+}
