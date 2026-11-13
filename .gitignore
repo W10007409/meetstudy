@@ -7,3 +7,10 @@ local.properties
 .superpowers/
 .DS_Store
 dist/*.apk
+firebase/node_modules/
+firebase/*.log
+teacherWeb/.env.local
+teacherWeb/node_modules/
+teacherWeb/dist/
+studentApp/google-services.json
+.playwright-mcp/

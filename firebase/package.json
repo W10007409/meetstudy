@@ -1,0 +1,14 @@
+{
+  "name": "meetstudy-firebase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore,storage,auth --project demo-meetstudy \"vitest run\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.3.0",
+    "firebase-tools": "^15.36.0",
+    "vitest": "^3.2.0"
+  }
+}

@@ -1,0 +1,76 @@
+rules_version = '2';
+// Schema: docs/superpowers/plans/2026-11-13-teacher-web-firebase.md ("Firestore / Storage schema").
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function isApprovedTeacher() {
+      return signedIn() && exists(userPath(me()))
+        && get(userPath(me())).data.role == 'teacher'
+        && get(userPath(me())).data.teacherStatus == 'approved';
+    }
+    function linkAccepted(t, s) {
+      let p = /databases/$(database)/documents/links/$(t + '_' + s);
+      return exists(p) && get(p).data.status == 'accepted';
+    }
+
+    match /users/{uid} {
+      // Teachers can look up students (search by id); nobody reads a teacher's doc but the teacher.
+      allow get: if signedIn() && (uid == me() || (isApprovedTeacher() && resource.data.role == 'student'));
+      // New teachers always start pending; only the operator (console) approves.
+      allow create: if signedIn() && uid == me()
+        && request.resource.data.role in ['student', 'teacher']
+        && (request.resource.data.role == 'student'
+              ? !('teacherStatus' in request.resource.data)
+              : request.resource.data.teacherStatus == 'pending');
+      allow update: if signedIn() && uid == me()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'teacherStatus', 'loginId']);
+    }
+
+    // Uniqueness of login ids: create-if-absent only, never changed or freed by clients.
+    match /loginIds/{id} {
+      allow get: if signedIn() && (isApprovedTeacher() || resource.data.uid == me());
+      allow create: if signedIn() && request.resource.data.uid == me() && request.resource.data.keys().hasOnly(['uid']);
+    }
+
+    match /links/{id} {
+      allow read: if signedIn() && (resource.data.teacherUid == me() || resource.data.studentUid == me());
+      allow create: if isApprovedTeacher()
+        && request.resource.data.teacherUid == me()
+        && id == me() + '_' + request.resource.data.studentUid
+        && request.resource.data.status == 'pending';
+      // Only the student accepts; nothing else may change.
+      allow update: if signedIn() && resource.data.studentUid == me()
+        && resource.data.status == 'pending' && request.resource.data.status == 'accepted'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if signedIn() && (resource.data.teacherUid == me() || resource.data.studentUid == me());
+    }
+
+    match /rooms/{roomId} {
+      function validRoom() {
+        return request.resource.data.teacherUid == me()
+          && request.resource.data.studentUids is list
+          && request.resource.data.studentUids.size() <= 6;
+      }
+      allow read: if signedIn() && (resource.data.teacherUid == me() || me() in resource.data.studentUids);
+      allow create: if isApprovedTeacher() && validRoom();
+      allow update: if isApprovedTeacher() && resource.data.teacherUid == me() && validRoom();
+
+      match /presence/{studentUid} {
+        function roomData() { return get(/databases/$(database)/documents/rooms/$(roomId)).data; }
+        allow read: if signedIn() && (roomData().teacherUid == me() || studentUid == me());
+        // A student only reports into rooms of a teacher they accepted, so adding an unlinked uid to a room shows nothing.
+        allow write: if signedIn() && studentUid == me()
+          && me() in roomData().studentUids
+          && linkAccepted(roomData().teacherUid, me());
+      }
+    }
+
+    match /sessions/{id} {
+      allow read: if signedIn() && (resource.data.studentUid == me() || linkAccepted(me(), resource.data.studentUid));
+      allow create: if signedIn() && request.resource.data.studentUid == me();
+      allow update: if signedIn() && resource.data.studentUid == me() && request.resource.data.studentUid == me();
+    }
+  }
+}
