@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.wjthinkbig.meetstudy.data.SessionRecord
 import com.wjthinkbig.meetstudy.data.SessionStore
+import com.wjthinkbig.meetstudy.data.StudyPoseStore
 import com.wjthinkbig.meetstudy.data.appFilesDir
 import com.wjthinkbig.meetstudy.domain.Baseline
 import com.wjthinkbig.meetstudy.domain.BreakPolicy
@@ -45,6 +46,7 @@ import com.wjthinkbig.meetstudy.domain.FocusStateMachine
 import com.wjthinkbig.meetstudy.domain.FrameSignals
 import com.wjthinkbig.meetstudy.domain.Segment
 import com.wjthinkbig.meetstudy.domain.StarRules
+import com.wjthinkbig.meetstudy.domain.StudyPoseModel
 import com.wjthinkbig.meetstudy.domain.StudySession
 import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
@@ -106,7 +108,9 @@ private class FrameWatch(var lastRealMs: Long)
 fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinished: (SessionRecord) -> Unit) {
     val startMs = remember { monotonicNowMs() }
     val startEpochMs = remember { nowEpochMs() }
-    val session = remember { StudySession(goalMs, startMs, FocusStateMachine(baseline)) }
+    val poseStore = remember { StudyPoseStore(appFilesDir()) }
+    val machine = remember { FocusStateMachine(baseline, poses = StudyPoseModel(poseStore.load())) }
+    val session = remember { StudySession(goalMs, startMs, machine) }
     val store = remember { SessionStore(appFilesDir()) }
     val watch = remember { FrameWatch(startMs) }
     val state by session.state.collectAsState()
@@ -145,6 +149,8 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
         val t = monotonicNowMs()
         val reached = session.isGoalReached(t)
         val e = Ended(Uuid.random().toString(), session.finish(t), t, reached)
+        // Learned study directions are a convenience: a failed write must not block saving the session.
+        try { poseStore.save(machine.poses.clusters) } catch (ex: Exception) { }
         ended = e
         save(e)
     }
@@ -284,6 +290,7 @@ internal fun secondsUntil(dueMs: Long, nowMs: Long): Long = maxOf(0L, (dueMs - n
 private fun pendingLabel(s: FocusState) = when (s) {
     FocusState.AWAY -> "자리를 비운 것 같아요"
     FocusState.LOOKING_AWAY -> "딴 곳을 보고 있어요"
+    FocusState.CAMERA_GAZE -> "카메라를 보고 있어요"
     FocusState.DROWSY -> "졸린 것 같아요"
     FocusState.PHONE -> "폰이 보여요"
     else -> "확인 중"

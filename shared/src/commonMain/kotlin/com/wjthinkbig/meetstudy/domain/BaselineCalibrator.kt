@@ -15,6 +15,8 @@ class BaselineCalibrator(private val durationMs: Long = 3_000) {
         val yaws = face.map { it.yaw!! }
         val mean = yaws.average()
         if (sqrt(yaws.sumOf { (it - mean) * (it - mean) } / yaws.size) >= 8.0) return null
-        return Baseline(mean.toFloat(), face.map { it.pitch!! }.average().toFloat())
+        val b = Baseline(mean.toFloat(), face.map { it.pitch!! }.average().toFloat())
+        // The reference is the study pose (eyes on the workbook); staring at this screen is not studying.
+        return if (isCameraGaze(b.yaw, b.pitch)) null else b
     }
 }

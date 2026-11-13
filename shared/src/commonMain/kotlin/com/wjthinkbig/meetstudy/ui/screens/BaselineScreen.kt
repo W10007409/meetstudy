@@ -22,13 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wjthinkbig.meetstudy.domain.Baseline
 import com.wjthinkbig.meetstudy.domain.BaselineCalibrator
+import com.wjthinkbig.meetstudy.domain.isCameraGaze
 import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val BASELINE_MS = 3_000L
-private const val BASELINE_GUARD_MS = 6_000L
+private const val BASELINE_GUARD_MS = 15_000L // includes time to look down from the screen to the workbook
 
 /** 3-second countdown while frames feed the calibrator; a null result offers a retry. */
 @Composable
@@ -45,6 +46,9 @@ fun BaselineScreen(source: FrameSource, onDone: (Baseline) -> Unit) {
         // Wall-clock guard: no frames (or a stalled camera) must not hang the screen.
         val finished = withTimeoutOrNull(BASELINE_GUARD_MS) {
         source.signals.takeWhile { s ->
+            // Start the 3 s only once the child has looked down from the screen to the workbook.
+            val y = s.yaw; val p = s.pitch
+            if (start == null && (!s.faceVisible || y == null || p == null || isCameraGaze(y, p))) return@takeWhile true
             val t0 = start ?: s.timeMs.also { start = it }
             calibrator.add(s)
             val elapsed = s.timeMs - t0
@@ -61,10 +65,11 @@ fun BaselineScreen(source: FrameSource, onDone: (Baseline) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("가만히 앞을 봐요", fontSize = 32.sp)
+        Text("평소처럼 문제집을 봐요", fontSize = 32.sp)
+        Text("화면 말고 문제집을 보고 있으면 시작돼요", fontSize = 20.sp)
         CameraPreview(Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(32.dp)))
         if (failed) {
-            Text("조금 더 가만히 있어 볼까요?", fontSize = 26.sp)
+            Text("문제집을 보고 가만히 있어 볼까요?", fontSize = 26.sp)
             BigButton("다시 해보기", enabled = true) { attempt++ }
         } else {
             Text("$remaining", fontSize = 96.sp)

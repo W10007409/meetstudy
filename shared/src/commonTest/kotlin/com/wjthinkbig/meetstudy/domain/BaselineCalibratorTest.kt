@@ -6,7 +6,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class BaselineCalibratorTest {
-    private fun frame(t: Long, face: Boolean = true, yaw: Float = 0f, pitch: Float = 0f) = FrameSignals(
+    // Defaults = reading pose (tablet at the desk corner), not facing the camera.
+    private fun frame(t: Long, face: Boolean = true, yaw: Float = 30f, pitch: Float = -25f) = FrameSignals(
         timeMs = t, faceVisible = face, identityMatch = null,
         yaw = if (face) yaw else null, pitch = if (face) pitch else null,
         eyesOpenProb = null, personVisible = true, noseBelowShoulders = null, phoneVisible = false,
@@ -30,12 +31,16 @@ class BaselineCalibratorTest {
     }
 
     @Test fun rejectsWhenUnstable() {
-        assertNull(run(3_000) { i -> frame(0, yaw = if (i % 2 == 0) 20f else -20f) })
+        assertNull(run(3_000) { i -> frame(0, yaw = if (i % 2 == 0) 50f else 10f) })
     }
 
     @Test fun averagesYawPitch() {
-        val b = run(3_000) { i -> frame(0, yaw = 5f + (i % 2), pitch = -10f) }!!
-        assertEquals(5.5f, b.yaw, 0.2f)
-        assertEquals(-10f, b.pitch, 0.01f)
+        val b = run(3_000) { i -> frame(0, yaw = 30f + (i % 2), pitch = -25f) }!!
+        assertEquals(30.5f, b.yaw, 0.2f)
+        assertEquals(-25f, b.pitch, 0.01f)
+    }
+
+    @Test fun rejectsLookingAtTheScreen() {
+        assertNull(run(3_000) { frame(0, yaw = 2f, pitch = -3f) })
     }
 }

@@ -1,8 +1,16 @@
 package com.wjthinkbig.meetstudy.domain
 
-import kotlin.math.abs
+/**
+ * [poses] holds where this child studies; it is seeded with the calibrated workbook pose and keeps learning
+ * from the frames it sees (see [StudyPoseModel]). Pass a persisted model to carry learning across sessions.
+ */
+class FocusStateMachine(
+    baseline: Baseline,
+    private val config: DetectionConfig = DetectionConfig(),
+    val poses: StudyPoseModel = StudyPoseModel(config = config),
+) {
+    init { poses.seed(baseline) }
 
-class FocusStateMachine(private val baseline: Baseline, private val config: DetectionConfig = DetectionConfig()) {
     var state: FocusState = FocusState.STUDYING
         private set
 
@@ -13,6 +21,7 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
     private var identityMatch: Boolean? = null
     private var appLeft = false
     private var onBreak = false
+    private var lastFrameMs: Long? = null
 
     /** What the current frames point to, before its threshold makes it the state; null when nothing differs. */
     val pending: FocusState? get() = candidate?.takeIf { it != state }
@@ -24,6 +33,7 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
         if (state == FocusState.APP_LEFT || state == FocusState.BREAK) return null
         s.identityMatch?.let { identityMatch = it }
         val c = candidateOf(s)
+        learn(s, c)
         var back: StateChange? = null
         if (c == null) {
             if (state != FocusState.STUDYING) {
@@ -83,24 +93,30 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
         FocusState.AWAY -> config.awayMs
         FocusState.PHONE -> config.phoneMs
         FocusState.DROWSY -> config.drowsyMs
+        FocusState.CAMERA_GAZE -> config.cameraGazeMs
         else -> config.lookAwayMs
     }
 
-    // Priority: AWAY > PHONE > DROWSY > LOOKING_AWAY; null = studying.
+    /** Learns only from frames that look like attention somewhere other than this device: studying or plain looking away. */
+    private fun learn(s: FrameSignals, c: FocusState?) {
+        val dt = lastFrameMs?.let { (s.timeMs - it).coerceIn(0L, 1_000L) } ?: 0L
+        lastFrameMs = s.timeMs
+        val y = s.yaw; val p = s.pitch
+        if (s.faceVisible && y != null && p != null && (c == null || c == FocusState.LOOKING_AWAY)) poses.observe(y, p, dt)
+    }
+
+    // Priority: AWAY > PHONE > DROWSY > CAMERA_GAZE > LOOKING_AWAY; null = studying.
     private fun candidateOf(s: FrameSignals): FocusState? {
         if ((!s.faceVisible && !s.personVisible) || identityMatch == false) return FocusState.AWAY
         if (s.phoneVisible) return FocusState.PHONE
-        // Eye-open probability drops when the head is bowed over a workbook, so only trust it near baseline pitch.
-        val headBowed = s.pitch?.let { it < baseline.pitch - config.eyesRulePitchDownMaxDeg } == true
-        val eyesClosed = !headBowed && s.eyesOpenProb?.let { it < config.eyesClosedProb } == true
+        // Eye-open probability drops when the face points down (reading), so only trust it with the head up.
+        val headDown = s.pitch?.let { it < -config.eyesRulePitchDownMaxDeg } == true
+        val eyesClosed = !headDown && s.eyesOpenProb?.let { it < config.eyesClosedProb } == true
         if (eyesClosed || (!s.faceVisible && s.personVisible && s.noseBelowShoulders == true)) return FocusState.DROWSY
-        if (s.faceVisible) {
-            val yawOut = s.yaw?.let { abs(it - baseline.yaw) > config.yawLimitDeg } == true
-            val pitchOut = s.pitch?.let {
-                val d = it - baseline.pitch
-                d > config.pitchUpLimitDeg || d < -config.pitchDownAllowDeg
-            } == true
-            if (yawOut || pitchOut) return FocusState.LOOKING_AWAY
+        val y = s.yaw; val p = s.pitch
+        if (s.faceVisible && y != null && p != null) {
+            if (isCameraGaze(y, p, config.cameraGazeDeg)) return FocusState.CAMERA_GAZE
+            if (!poses.isStudyPose(y, p)) return FocusState.LOOKING_AWAY
         }
         return null
     }

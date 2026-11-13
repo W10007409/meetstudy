@@ -4,9 +4,11 @@ import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FocusStateMachineTest {
-    private val base = Baseline(yaw = 5f, pitch = -10f)
+    // Calibrated study pose: reading the workbook with the tablet at the desk corner (not facing the camera).
+    private val base = Baseline(yaw = 30f, pitch = -25f)
     private fun sm() = FocusStateMachine(base)
 
     private fun frame(
@@ -71,7 +73,7 @@ class FocusStateMachineTest {
 
     @Test fun eyesClosed20sIsDrowsy() {
         val m = sm()
-        assertEquals(listOf(StateChange(FocusState.DROWSY, 0)), m.feed(0, 20_000) { frame(it, eyes = 0.1f) })
+        assertEquals(listOf(StateChange(FocusState.DROWSY, 0)), m.feed(0, 20_000) { frame(it, pitch = -5f, eyes = 0.1f) })
     }
 
     @Test fun headDownOnDesk20sIsDrowsy() {
@@ -201,6 +203,29 @@ class FocusStateMachineTest {
             m.onFrame(frame(t, yaw = base.yaw + if ((t / 200) % 2 == 0L) 34 else 36))
         }
         assertEquals(emptyList(), changes)
+    }
+
+    @Test fun staringAtTheCamera10sIsNotStudying() {
+        val m = sm()
+        assertEquals(emptyList(), m.feed(0, 9_500) { frame(it, yaw = 2f, pitch = 3f) })
+        assertEquals(StateChange(FocusState.CAMERA_GAZE, 0), m.onFrame(frame(10_000, yaw = 2f, pitch = 3f)))
+    }
+
+    @Test fun glancingAtTheTimerIsFine() {
+        val m = sm()
+        val changes = (0L..60_000L step 200).mapNotNull { t ->
+            m.onFrame(if (t % 20_000 < 3_000) frame(t, yaw = 0f, pitch = 0f) else studying(t))
+        }
+        assertEquals(emptyList(), changes)
+    }
+
+    @Test fun secondTabletIsLearnedAsStudy() {
+        val m = sm()
+        val tablet = { t: Long -> frame(t, yaw = -45f, pitch = 10f) }
+        assertEquals(StateChange(FocusState.LOOKING_AWAY, 0), m.feed(0, 15_000, tablet).single())
+        val back = m.feed(15_500, 190_000, tablet).single() // 3 minutes of steady use, then +2 s return debounce
+        assertEquals(FocusState.STUDYING, back.state)
+        assertTrue(back.startedAtMs in 180_000..182_000, "returned at ${back.startedAtMs}")
     }
 
     @Test fun readingWithHeadBowedIsNotDrowsy() {

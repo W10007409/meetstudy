@@ -6,7 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class StudySessionTest {
-    private val base = Baseline(yaw = 5f, pitch = -10f)
+    private val base = Baseline(yaw = 30f, pitch = -25f) // reading pose, not facing the camera
     private fun session(goalMs: Long = 60_000) = StudySession(goalMs, 0, FocusStateMachine(base))
 
     private fun frame(t: Long, face: Boolean) = FrameSignals(

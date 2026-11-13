@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.rememberCoroutineScope
 import com.wjthinkbig.meetstudy.data.SessionRecord
 import com.wjthinkbig.meetstudy.data.SessionStore
+import com.wjthinkbig.meetstudy.data.StudyPoseStore
 import com.wjthinkbig.meetstudy.data.appFilesDir
 import com.wjthinkbig.meetstudy.platform.FaceVault
 import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
@@ -89,6 +90,10 @@ private fun Home(onStart: () -> Unit, onReEnroll: () -> Unit, onHistory: (Report
         }) { Text("내 기록", fontSize = 20.sp) }
         if (empty) Text("아직 기록이 없어요", fontSize = 16.sp)
         TextButton(onClick = onReEnroll) { Text("얼굴 다시 등록", fontSize = 16.sp) }
+        var poseReset by remember { mutableStateOf(false) }
+        TextButton(onClick = {
+            poseReset = try { StudyPoseStore(appFilesDir()).clear(); true } catch (e: Exception) { false }
+        }) { Text(if (poseReset) "공부 자세를 처음부터 다시 배워요" else "공부 자세 다시 배우기", fontSize = 16.sp) }
     }
 }
 
