@@ -38,6 +38,7 @@ import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.wjthinkbig.meetstudy.domain.FaceBox
+import com.wjthinkbig.meetstudy.domain.DebugFrame
 import com.wjthinkbig.meetstudy.domain.FrameSignals
 import com.wjthinkbig.meetstudy.domain.IDENTITY_THRESHOLD
 import com.wjthinkbig.meetstudy.domain.cosine
@@ -105,6 +106,7 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
         var lastFrameMs = 0L
         var lastPoseMs = 0L
         var lastPose: PoseReading? = null
+        var lastPoseDebug: FloatArray? = null
         val controller = LifecycleCameraController(context).apply {
             cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
             setEnabledUseCases(LifecycleCameraController.IMAGE_ANALYSIS)
@@ -143,9 +145,14 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     } else {
                         source.latestFace.value = null
                         schedule.faceGone()
-                        if (now - lastPoseMs >= POSE_GAP_MS) {
-                            lastPoseMs = now
-                            awaitOrNull(poseDetector.process(input))?.let { lastPose = poseReading(it) }
+                    }
+                    // Pose only matters without a face; the recognition view wants the skeleton all the time.
+                    val debugOn = DebugFlags.recognitionView
+                    if ((face == null || debugOn) && now - lastPoseMs >= POSE_GAP_MS) {
+                        lastPoseMs = now
+                        awaitOrNull(poseDetector.process(input))?.let {
+                            lastPose = poseReading(it)
+                            lastPoseDebug = if (debugOn) poseArray(it) else null
                         }
                     }
                     val reading = face?.let {
@@ -164,14 +171,17 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     }
                     if (phoneDetector == null || phoneDetector.disabled || !base.personVisible) phoneVisible = false
                     // ponytail: no hand-proximity check; add MediaPipe HandLandmarker if false positives are common
-                    val box = face?.boundingBox?.let { b ->
-                        // ML Kit boxes are in upright coords; swap dims when the sensor is rotated.
-                        val rotated = proxy.imageInfo.rotationDegrees % 180 != 0
-                        val w = (if (rotated) proxy.height else proxy.width).toFloat()
-                        val h = (if (rotated) proxy.width else proxy.height).toFloat()
-                        FaceBox(b.exactCenterX() / w, b.exactCenterY() / h, b.height() / h)
-                    }
-                    source.flow.tryEmit(base.copy(identityMatch = identityMatch, phoneVisible = phoneVisible, faceBox = box))
+                    // ML Kit results are in upright coords; swap dims when the sensor is rotated.
+                    val rotated = proxy.imageInfo.rotationDegrees % 180 != 0
+                    val w = (if (rotated) proxy.height else proxy.width).toFloat()
+                    val h = (if (rotated) proxy.width else proxy.height).toFloat()
+                    val box = face?.boundingBox?.let { b -> FaceBox(b.exactCenterX() / w, b.exactCenterY() / h, b.height() / h) }
+                    val debug = if (!debugOn) null else DebugFrame(
+                        w.toInt(), h.toInt(),
+                        face?.boundingBox?.let { floatArrayOf(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat()) },
+                        lastPoseDebug,
+                    )
+                    source.flow.tryEmit(base.copy(identityMatch = identityMatch, phoneVisible = phoneVisible, faceBox = box, debug = debug))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
                     Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)
@@ -204,6 +214,17 @@ private fun poseReading(pose: Pose): PoseReading? {
         (l.position.y + r.position.y) / 2f,
         pose.getPoseLandmark(PoseLandmark.NOSE)?.position?.y,
     )
+}
+
+/** x, y, inFrameLikelihood per landmark type (0..32); missing landmarks stay at likelihood 0. */
+private fun poseArray(pose: Pose): FloatArray {
+    val a = FloatArray(33 * 3)
+    for (l in pose.allPoseLandmarks) {
+        val i = l.landmarkType
+        if (i !in 0..32) continue
+        a[i * 3] = l.position.x; a[i * 3 + 1] = l.position.y; a[i * 3 + 2] = l.inFrameLikelihood
+    }
+    return a
 }
 
 private fun uprightBitmap(proxy: ImageProxy): Bitmap {

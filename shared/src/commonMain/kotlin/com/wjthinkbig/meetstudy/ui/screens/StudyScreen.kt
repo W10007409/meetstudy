@@ -50,6 +50,7 @@ import com.wjthinkbig.meetstudy.domain.StudySession
 import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import com.wjthinkbig.meetstudy.platform.KeepScreenOn
+import com.wjthinkbig.meetstudy.platform.DebugFlags
 import com.wjthinkbig.meetstudy.platform.DeviceMoveWatcher
 import androidx.compose.runtime.mutableIntStateOf
 import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
@@ -124,6 +125,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     var confirmEnd by remember { mutableStateOf(false) }
     var moves by remember { mutableIntStateOf(0) }
     var recalibrating by remember { mutableStateOf(false) }
+    var debugFrame by remember { mutableStateOf<FrameSignals?>(null) }
 
     // Segments live in [ended] until a save succeeds, so a failed write never loses the session.
     fun save(e: Ended) {
@@ -174,6 +176,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
             if (ended != null) return@collect
             watch.lastRealMs = s.timeMs
             session.onFrame(s)
+            if (DebugFlags.recognitionView) debugFrame = s
         }
     }
 
@@ -224,6 +227,11 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
         main = { m, _ ->
         Box(m.clip(RoundedCornerShape(28.dp)).background(Color.Black)) {
             CameraPreview(Modifier.fillMaxSize())
+            if (DebugFlags.recognitionView) RecognitionOverlay(debugFrame, machine.poses, stateLabel(state))
+            RecognitionToggle(DebugFlags.recognitionView, Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                DebugFlags.recognitionView = !DebugFlags.recognitionView
+                if (!DebugFlags.recognitionView) debugFrame = null
+            }
             Column(Modifier.align(Alignment.TopStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusChip(
                     text = when {

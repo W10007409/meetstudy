@@ -62,3 +62,16 @@ class StudyScreenLogicTest {
         assertEquals(mono.map { it.endMs - it.startMs }, epoch.map { it.endMs - it.startMs })
     }
 }
+
+class RecognitionOverlayMathTest {
+    @Test fun frontPreviewIsMirroredAndCentred() {
+        // 480x640 image on a 960x1280 view: scale 2, no offset, x mirrored.
+        val p = previewPoint(100f, 50f, 480, 640, 960f, 1280f)
+        kotlin.test.assertEquals(760f, p.x)
+        kotlin.test.assertEquals(100f, p.y)
+        // Wider view crops top/bottom: 480x640 on 1200x1200 -> scale 2.5, y offset -200.
+        val q = previewPoint(240f, 320f, 480, 640, 1200f, 1200f)
+        kotlin.test.assertEquals(600f, q.x)
+        kotlin.test.assertEquals(600f, q.y)
+    }
+}

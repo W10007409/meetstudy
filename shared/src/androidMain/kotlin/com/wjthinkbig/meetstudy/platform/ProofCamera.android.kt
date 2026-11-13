@@ -21,6 +21,18 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -102,6 +114,8 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     var shot by remember { mutableStateOf(false) }
     val controller = remember { LifecycleCameraController(context) }
+    // Manual shutter, set up inside the camera effect: auto-capture can miss real workbooks, the child never gets stuck.
+    val shutter = remember { AtomicReference<(() -> Unit)?>(null) }
 
     DisposableEffect(Unit) {
         val analysisExec = Executors.newSingleThreadExecutor()
@@ -125,7 +139,7 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
             }
         }
 
-        fun process(image: ImageProxy) {
+        fun process(image: ImageProxy, manual: Boolean) {
             try {
                 val t0 = SystemClock.elapsedRealtime()
                 val bmp = try { uprightFrom(image) } finally { image.close() }
@@ -135,8 +149,9 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                     FloatArray(8) { f.quad[it] * (if (it % 2 == 0) sx else sy) }
                 }
                 val q = if (fallback?.fromText == true) scaled else QuadDetector.find(bmp) ?: scaled
-                if (q == null) { bmp.recycle(); return finish(null) }
-                val warped = try { QuadDetector.warp(bmp, q) } finally { bmp.recycle() }
+                if (q == null && !manual) { bmp.recycle(); return finish(null) }
+                // Manual shot with no page found: keep the whole frame (capped like the warp output).
+                val warped = if (q != null) try { QuadDetector.warp(bmp, q) } finally { bmp.recycle() } else capped(bmp)
                 val file = File(context.filesDir, "proofs").apply { mkdirs() }.resolve("$sessionId.jpg")
                 try {
                     file.outputStream().use { warped.compress(Bitmap.CompressFormat.JPEG, 85, it) }
@@ -151,6 +166,18 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                 finish(null)
             }
         }
+
+        fun shoot(manual: Boolean) {
+            if (disposed.get()) return
+            controller.takePicture(captureExec, object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) = process(image, manual)
+                override fun onError(exception: ImageCaptureException) {
+                    Log.w(TAG, "takePicture failed: " + exception.javaClass.simpleName)
+                    finish(null)
+                }
+            })
+        }
+        shutter.set { if (capturing.compareAndSet(false, true)) { shot = true; shoot(true) } }
 
         controller.apply {
             cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -191,16 +218,7 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                         if (shown != null) last.set(Last(shown, bmp.width, bmp.height, fromText = q == null))
                         if (progress >= 1f && capturing.compareAndSet(false, true)) {
                             shot = true
-                            ContextCompat.getMainExecutor(context).execute {
-                                if (disposed.get()) return@execute
-                                takePicture(captureExec, object : ImageCapture.OnImageCapturedCallback() {
-                                    override fun onCaptureSuccess(image: ImageProxy) = process(image)
-                                    override fun onError(exception: ImageCaptureException) {
-                                        Log.w(TAG, "takePicture failed: " + exception.javaClass.simpleName)
-                                        finish(null)
-                                    }
-                                })
-                            }
+                            ContextCompat.getMainExecutor(context).execute { shoot(false) }
                         }
                     } finally { bmp.recycle() }
                 } catch (e: Exception) {
@@ -213,6 +231,7 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
         }
         onDispose {
             disposed.set(true)
+            shutter.set(null)
             controller.unbind()
             analysisExec.shutdown()
             captureExec.shutdown()
@@ -250,14 +269,37 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
             o?.quad == null -> "공부한 문제집이나 책을 비춰 주세요"
             else -> "글자가 잘 보이게 조금 더 가까이"
         }
-        Text(hint, color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0x99000000)).padding(12.dp))
-        CancelButton(onCancel)
+        Column(Modifier.align(Alignment.TopCenter).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(hint, color = Color.White, fontSize = 24.sp, modifier = Modifier.background(Color(0x99000000), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 10.dp))
+            if (!shot) Text("자동으로 안 찍히면 아래 버튼을 눌러요", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(top = 8.dp).background(Color(0x66000000), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+        Row(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(24.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilledTonalButton(onClick = onCancel, modifier = Modifier.height(56.dp)) { Text("다음에 할게요", fontSize = 18.sp) }
+            // Shutter: white disc with a ring, like the system camera.
+            Box(
+                Modifier.size(88.dp).border(5.dp, Color.White, CircleShape).padding(9.dp).clip(CircleShape)
+                    .background(if (shot) Color.LightGray else Color.White)
+                    .clickable(enabled = !shot) { shutter.get()?.invoke() },
+            )
+            Text("직접 찍기", color = Color.White, fontSize = 18.sp, modifier = Modifier.background(Color(0x66000000), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+        }
     }
 }
 
 @Composable
 private fun BoxScope.CancelButton(onCancel: () -> Unit) =
     Button(onClick = onCancel, modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)) { Text("다음에 할게요", fontSize = 20.sp) }
+
+/** Longest side at most 1600 px, matching the warped output; recycles [src] when it scales. */
+private fun capped(src: Bitmap): Bitmap {
+    val scale = 1600f / maxOf(src.width, src.height)
+    if (scale >= 1f) return src
+    return Bitmap.createScaledBitmap(src, (src.width * scale).toInt(), (src.height * scale).toInt(), true).also { src.recycle() }
+}
 
 /** Counts non-whitespace characters of recognized elements (inside [quad]'s bounding box when given) and unions their boxes. */
 private fun textStats(text: com.google.mlkit.vision.text.Text, quad: FloatArray?): TextStats {
