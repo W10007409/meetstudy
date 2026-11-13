@@ -17,6 +17,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
@@ -38,6 +39,10 @@ kotlin {
             implementation(kotlin("test"))
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "com.wjthinkbig.meetstudy.resources"
 }
 
 android {

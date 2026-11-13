@@ -1,5 +1,6 @@
 package com.wjthinkbig.meetstudy.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wjthinkbig.meetstudy.platform.CameraPreview
+import com.wjthinkbig.meetstudy.resources.Res
+import com.wjthinkbig.meetstudy.resources.icon_check_arm
+import com.wjthinkbig.meetstudy.resources.icon_check_face
+import com.wjthinkbig.meetstudy.resources.icon_check_light
+import org.jetbrains.compose.resources.painterResource
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import com.wjthinkbig.meetstudy.ui.guide.PlacementGuideAnimation
 import kotlinx.coroutines.coroutineScope
@@ -31,7 +37,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.TimeSource
 
-private val CHECKS = listOf("얼굴과 책이 같이 보이게", "팔 길이만큼 떨어뜨려서", "밝은 곳에서, 충전기 연결")
+private val CHECKS = listOf(
+    "얼굴과 책이 같이 보이게" to Res.drawable.icon_check_face,
+    "팔 길이만큼 떨어뜨려서" to Res.drawable.icon_check_arm,
+    "밝은 곳에서, 충전기 연결" to Res.drawable.icon_check_light,
+)
 
 /** Latest-frame face visibility; no frame for more than 1s counts as not visible. */
 @Composable
@@ -62,7 +72,14 @@ fun PlacementGuideScreen(source: FrameSource, onStart: () -> Unit) {
     ) {
         Text("태블릿을 이렇게 놓아요", fontSize = 28.sp)
         PlacementGuideAnimation(Modifier.widthIn(max = 480.dp).fillMaxWidth())
-        CHECKS.forEach { Text("✓ $it", fontSize = 22.sp) }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            CHECKS.forEach { (text, icon) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(painterResource(icon), null, Modifier.size(44.dp))
+                    Text(text, fontSize = 22.sp)
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             CameraPreview(Modifier.size(96.dp).clip(RoundedCornerShape(20.dp)))
             Text(if (faceVisible) "얼굴 인식됨 ✓" else "얼굴을 비춰 주세요", fontSize = 22.sp)

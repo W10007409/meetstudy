@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Open workbook under a camera lens: "studying, on camera". Drawn inside the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,60 Q41,55 52,60 L52,79 Q41,74 30,79 Z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M56,60 Q67,55 78,60 L78,79 Q67,74 56,79 Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:fillColor="#00000000"
+        android:pathData="M54,30 a11,11 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFD966"
+        android:pathData="M54,37 a4,4 0 1,0 0.01,0 Z" />
+</vector>
