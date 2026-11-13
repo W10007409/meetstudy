@@ -1,0 +1,434 @@
+{
+ "timezone": "Asia/Seoul",
+ "cases": [
+  {
+   "name": "mockupSession",
+   "segments": [
+    {
+     "state": "STUDYING",
+     "startMs": 1794546600000,
+     "endMs": 1794547860000
+    },
+    {
+     "state": "LOOKING_AWAY",
+     "startMs": 1794547860000,
+     "endMs": 1794548040000
+    },
+    {
+     "state": "STUDYING",
+     "startMs": 1794548040000,
+     "endMs": 1794548820000
+    },
+    {
+     "state": "BREAK",
+     "startMs": 1794548820000,
+     "endMs": 1794549300000
+    },
+    {
+     "state": "STUDYING",
+     "startMs": 1794549300000,
+     "endMs": 1794549960000
+    },
+    {
+     "state": "LOOKING_AWAY",
+     "startMs": 1794549960000,
+     "endMs": 1794550020000
+    },
+    {
+     "state": "STUDYING",
+     "startMs": 1794550020000,
+     "endMs": 1794550140000
+    },
+    {
+     "state": "AWAY",
+     "startMs": 1794550140000,
+     "endMs": 1794550320000
+    },
+    {
+     "state": "STUDYING",
+     "startMs": 1794550320000,
+     "endMs": 1794550680000
+    }
+   ],
+   "expect": {
+    "totalMs": 4080000,
+    "focusedMs": 3180000,
+    "focusRatePct": 78,
+    "lostMs": 420000,
+    "planner": [
+     {
+      "hour": 14,
+      "row": "..........SSSSSSSSSSSSSSSSSSSSSLLLSSSSSSSSSSSSSBBBBBBBBSSSSS"
+     },
+     {
+      "hour": 15,
+      "row": "SSSSSSLSSAAASSSSSS.........................................."
+     }
+    ]
+   }
+  },
+  {
+   "name": "crossesMidnight",
+   "segments": [
+    {
+     "state": "STUDYING",
+     "startMs": 1794581400000,
+     "endMs": 1794583200000
+    }
+   ],
+   "expect": {
+    "totalMs": 1800000,
+    "focusedMs": 1800000,
+    "focusRatePct": 100,
+    "lostMs": 0,
+    "planner": [
+     {
+      "hour": 23,
+      "row": "..................................................SSSSSSSSSS"
+     },
+     {
+      "hour": 0,
+      "row": "SSSSSSSSSSSSSSSSSSSS........................................"
+     }
+    ]
+   }
+  },
+  {
+   "name": "endsOnTheHour",
+   "segments": [
+    {
+     "state": "STUDYING",
+     "startMs": 1794528000000,
+     "endMs": 1794530400000
+    },
+    {
+     "state": "PHONE",
+     "startMs": 1794530400000,
+     "endMs": 1794531600000
+    }
+   ],
+   "expect": {
+    "totalMs": 3600000,
+    "focusedMs": 2400000,
+    "focusRatePct": 67,
+    "lostMs": 1200000,
+    "planner": [
+     {
+      "hour": 9,
+      "row": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSPPPPPPPPPPPPPPPPPPPP"
+     }
+    ]
+   }
+  },
+  {
+   "name": "empty",
+   "segments": [],
+   "expect": {
+    "totalMs": 0,
+    "focusedMs": 0,
+    "focusRatePct": 0,
+    "lostMs": 0,
+    "planner": []
+   }
+  }
+ ],
+ "days": [
+  {
+   "name": "weekStreak",
+   "today": "2026-11-13",
+   "days": 7,
+   "records": [
+    {
+     "id": "a",
+     "startMs": 1794117600000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794117600000,
+       "endMs": 1794120000000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "b",
+     "startMs": 1794290400000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794290400000,
+       "endMs": 1794293400000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": true
+    },
+    {
+     "id": "c",
+     "startMs": 1794376800000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794376800000,
+       "endMs": 1794378600000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "d",
+     "startMs": 1794463200000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794463200000,
+       "endMs": 1794465900000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "e",
+     "startMs": 1794546000000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794546000000,
+       "endMs": 1794549180000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": true
+    },
+    {
+     "id": "old",
+     "startMs": 1793512800000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1793512800000,
+       "endMs": 1793514600000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "late",
+     "startMs": 1794495000000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794495000000,
+       "endMs": 1794496800000
+      }
+     ],
+     "goalStar": false,
+     "proofStar": false
+    }
+   ],
+   "expect": {
+    "daily": [
+     {
+      "date": "2026-11-07",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-08",
+      "focusedMs": 2400000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-09",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-10",
+      "focusedMs": 3000000,
+      "stars": 2
+     },
+     {
+      "date": "2026-11-11",
+      "focusedMs": 1800000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-12",
+      "focusedMs": 4500000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-13",
+      "focusedMs": 3180000,
+      "stars": 2
+     }
+    ],
+    "streak": 4
+   }
+  },
+  {
+   "name": "brokenYesterdayGoalToday",
+   "today": "2026-11-13",
+   "days": 7,
+   "records": [
+    {
+     "id": "a",
+     "startMs": 1794376800000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794376800000,
+       "endMs": 1794379200000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "b",
+     "startMs": 1794549600000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794549600000,
+       "endMs": 1794552000000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    }
+   ],
+   "expect": {
+    "daily": [
+     {
+      "date": "2026-11-07",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-08",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-09",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-10",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-11",
+      "focusedMs": 2400000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-12",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-13",
+      "focusedMs": 2400000,
+      "stars": 1
+     }
+    ],
+    "streak": 1
+   }
+  },
+  {
+   "name": "noGoalTodayYesterdayGoal",
+   "today": "2026-11-13",
+   "days": 7,
+   "records": [
+    {
+     "id": "a",
+     "startMs": 1794376800000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794376800000,
+       "endMs": 1794379200000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "b",
+     "startMs": 1794463200000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794463200000,
+       "endMs": 1794465600000
+      }
+     ],
+     "goalStar": true,
+     "proofStar": false
+    },
+    {
+     "id": "c",
+     "startMs": 1794549600000,
+     "segments": [
+      {
+       "state": "STUDYING",
+       "startMs": 1794549600000,
+       "endMs": 1794550200000
+      }
+     ],
+     "goalStar": false,
+     "proofStar": false
+    }
+   ],
+   "expect": {
+    "daily": [
+     {
+      "date": "2026-11-07",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-08",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-09",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-10",
+      "focusedMs": 0,
+      "stars": 0
+     },
+     {
+      "date": "2026-11-11",
+      "focusedMs": 2400000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-12",
+      "focusedMs": 2400000,
+      "stars": 1
+     },
+     {
+      "date": "2026-11-13",
+      "focusedMs": 600000,
+      "stars": 0
+     }
+    ],
+    "streak": 2
+   }
+  }
+ ]
+}
