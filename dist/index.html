@@ -197,7 +197,7 @@
       .then(r => r.ok ? r.text() : Promise.reject(r.status))
       .then(text => {
         // The manifest ships with a placeholder IPA address; a link with it would fail silently on the phone.
-        if (text.includes('REPLACE-WITH-HOST')) {
+        if (text.includes("https://REPLACE-WITH-HOST/")) {
           iosUnavailable('iOS 설치 주소가 아직 설정되지 않았어요. manifest.plist의 IPA 주소를 이 사이트 주소로 바꿔 주세요.');
           return;
         }
