@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,8 +59,8 @@ fun ProofDoneScreen(record: SessionRecord, starsToday: Int, onReport: () -> Unit
         Text("공부 인증 완료!", fontSize = 40.sp)
         record.proofPhotoPath?.let { PhotoThumbnail(it, Modifier.height(240.dp)) }
         if (record.proofStar) Text("+1 ★", fontSize = 40.sp) else Text("오늘 별은 다 모았어요", fontSize = 22.sp)
-        OutlinedButton(onClick = { sharing = true }) { Text("공유하기", fontSize = 20.sp) }
-        OutlinedButton(onClick = onReport) { Text("리포트 보기", fontSize = 20.sp) }
+        SoftButton("공유하기") { sharing = true }
+        SoftButton("리포트 보기", onClick = onReport)
         TextButton(onClick = onHome) { Text("홈으로", fontSize = 16.sp) }
     }
     if (sharing) ShareSheet(record, starsToday) { sharing = false }

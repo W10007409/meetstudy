@@ -7,7 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import com.wjthinkbig.meetstudy.ui.theme.MeetStudyTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.font.FontWeight
+import com.wjthinkbig.meetstudy.ui.screens.BigButton
+import com.wjthinkbig.meetstudy.ui.screens.SoftButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,7 +47,7 @@ import com.wjthinkbig.meetstudy.ui.screens.readHistoryOrEmpty
 
 @Composable
 fun App() {
-    MaterialTheme {
+    MeetStudyTheme {
         var needEnroll by remember { mutableStateOf(FaceVault.load() == null) }
         var studying by remember { mutableStateOf(false) }
         var history by remember { mutableStateOf<ReportData?>(null) }
@@ -71,23 +76,21 @@ private fun Home(onStart: () -> Unit, onReEnroll: () -> Unit, onHistory: (Report
     val scope = rememberCoroutineScope()
     var empty by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
-        Button(
-            onClick = onStart,
-            shape = RoundedCornerShape(40.dp),
-            modifier = Modifier.fillMaxWidth(0.8f).height(120.dp),
-        ) { Text("공부 시작하기", fontSize = 36.sp) }
-        OutlinedButton(onClick = {
+        Text("MeetStudy", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Text("오늘도 같이 집중해 볼까요?", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        BigButton("공부 시작하기", modifier = Modifier.padding(top = 24.dp).height(88.dp), onClick = onStart)
+        SoftButton("내 기록", onClick = {
             scope.launch {
                 val tz = TimeZone.currentSystemDefault()
                 val all = withContext(Dispatchers.Default) { readHistoryOrEmpty({ SessionStore(appFilesDir()).all() }) }
                 val latest = all.maxByOrNull { it.startMs }
                 if (latest == null) empty = true else onHistory(ReportData(latest, all, tz, todayIn(tz)))
             }
-        }) { Text("내 기록", fontSize = 20.sp) }
+        })
         if (empty) Text("아직 기록이 없어요", fontSize = 16.sp)
         TextButton(onClick = onReEnroll) { Text("얼굴 다시 등록", fontSize = 16.sp) }
         var poseReset by remember { mutableStateOf(false) }

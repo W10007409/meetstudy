@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -193,14 +192,4 @@ private fun FaceGuide(fits: Boolean, progress: Float, modifier: Modifier) {
             drawArc(GuideGreen, -90f, 360f * progress, false, ring.topLeft, ring.size, style = Stroke(stroke, cap = StrokeCap.Round))
         }
     }
-}
-
-@Composable
-internal fun BigButton(text: String, enabled: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(28.dp),
-        modifier = Modifier.fillMaxWidth(0.6f).height(72.dp),
-    ) { Text(text, fontSize = 26.sp) }
 }

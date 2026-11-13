@@ -1,6 +1,11 @@
 package com.wjthinkbig.meetstudy.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,9 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,25 +68,43 @@ internal fun rememberFaceVisible(source: FrameSource): Boolean {
 @Composable
 fun PlacementGuideScreen(source: FrameSource, onStart: () -> Unit) {
     val faceVisible = rememberFaceVisible(source)
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text("태블릿을 이렇게 놓아요", fontSize = 28.sp)
-        PlacementGuideAnimation(Modifier.widthIn(max = 480.dp).fillMaxWidth())
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            CHECKS.forEach { (text, icon) ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Image(painterResource(icon), null, Modifier.size(44.dp))
-                    Text(text, fontSize = 22.sp)
-                }
+    AdaptivePane(
+        Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+        main = { m, compact ->
+            Column(m, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)) {
+                Text("태블릿을 이렇게 놓아요", fontSize = if (compact) 22.sp else 28.sp, fontWeight = FontWeight.Bold)
+                PlacementGuideAnimation(Modifier.weight(1f).fillMaxWidth(), compact)
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            CameraPreview(Modifier.size(96.dp).clip(RoundedCornerShape(20.dp)))
-            Text(if (faceVisible) "얼굴 인식됨 ✓" else "얼굴을 비춰 주세요", fontSize = 22.sp)
-        }
-        BigButton("공부 시작", enabled = faceVisible, onClick = onStart)
-    }
+        },
+        side = { m, compact, _ ->
+            Column(m, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 16.dp)) {
+                Column(
+                    Modifier.widthIn(max = 480.dp).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White)
+                        .padding(horizontal = 16.dp, vertical = if (compact) 8.dp else 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 8.dp),
+                ) {
+                    CHECKS.forEach { (text, icon) ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Image(painterResource(icon), null, Modifier.size(if (compact) 32.dp else 44.dp))
+                            Text(text, fontSize = if (compact) 16.sp else 20.sp)
+                        }
+                    }
+                }
+                Row(
+                    Modifier.widthIn(max = 480.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CameraPreview(Modifier.size(if (compact) 64.dp else 88.dp).clip(CircleShape))
+                    Text(
+                        if (faceVisible) "얼굴이 보여요 ✓" else "카메라에 얼굴을 비춰 주세요",
+                        fontSize = if (compact) 17.sp else 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (faceVisible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                BigButton("공부 시작", enabled = faceVisible, onClick = onStart)
+            }
+        },
+    )
 }

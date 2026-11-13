@@ -10,12 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -208,12 +207,10 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     val cameraStale = shouldFeedSynthetic(watch.lastRealMs, now, state)
     val color = stateColor(state)
 
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(28.dp)).background(Color.Black)) {
+    AdaptivePane(
+        Modifier.padding(16.dp),
+        main = { m, _ ->
+        Box(m.clip(RoundedCornerShape(28.dp)).background(Color.Black)) {
             CameraPreview(Modifier.fillMaxSize())
             Column(Modifier.align(Alignment.TopStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatusChip(
@@ -229,49 +226,46 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
                     StatusChip("${pendingLabel(p.state)} · ${secondsUntil(p.dueMs, now)}초", Color.Black.copy(alpha = 0.6f))
                 }
             }
-            Surface(Modifier.align(Alignment.TopEnd).padding(16.dp), shape = RoundedCornerShape(50), color = Color(0xCCEFF1F4)) {
+            Surface(Modifier.align(Alignment.BottomCenter).padding(12.dp), shape = RoundedCornerShape(50), color = Color(0xCCEFF1F4)) {
                 Text("충전기를 연결해 주세요", fontSize = 14.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
             }
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(240.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = { (focused.toFloat() / goalMs).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxSize(),
-                    color = color,
-                    strokeWidth = 18.dp,
-                    trackColor = Color(0xFFE6E9ED),
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(formatClock(goalMs - focused), fontSize = 52.sp)
-                    Text("순공부 ${formatClock(focused, alwaysHours = true)}", fontSize = 16.sp)
+        },
+        side = { m, compact, wide ->
+            Column(m, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 20.dp)) {
+                val ring = if (compact) 170.dp else 240.dp
+                Box(Modifier.size(ring), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = { (focused.toFloat() / goalMs).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxSize(),
+                        color = color,
+                        strokeWidth = if (compact) 14.dp else 18.dp,
+                        trackColor = Color(0xFFE9E4DB),
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(formatClock(goalMs - focused), fontSize = if (compact) 36.sp else 52.sp, fontWeight = FontWeight.Bold)
+                        Text("순공부 ${formatClock(focused, alwaysHours = true)}", fontSize = if (compact) 13.sp else 16.sp)
+                    }
+                }
+                val breakText = if (onBreak) "휴식 끝내기" else "휴식 (${session.breaksLeft()}회)"
+                val onBreakClick = {
+                    val t = monotonicNowMs()
+                    if (onBreak) session.endBreak(t)
+                    else if (session.startBreak(t)) breakStartMs = t
+                    now = t
+                }
+                if (wide) {
+                    BigButton(breakText, enabled = onBreak || session.breaksLeft() > 0, color = stateColor(FocusState.BREAK), onClick = onBreakClick)
+                    SoftButton("공부 끝내기") { confirmEnd = true }
+                } else {
+                    Row(Modifier.widthIn(max = 560.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BigButton(breakText, enabled = onBreak || session.breaksLeft() > 0, modifier = Modifier.weight(1f), color = stateColor(FocusState.BREAK), onClick = onBreakClick)
+                        SoftButton("공부 끝내기", modifier = Modifier.weight(1f).height(64.dp)) { confirmEnd = true }
+                    }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = {
-                        val t = monotonicNowMs()
-                        if (onBreak) session.endBreak(t)
-                        else if (session.startBreak(t)) breakStartMs = t
-                        now = t
-                    },
-                    enabled = onBreak || session.breaksLeft() > 0,
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = stateColor(FocusState.BREAK)),
-                    modifier = Modifier.height(72.dp),
-                ) { Text(if (onBreak) "휴식 끝내기" else "휴식 (${session.breaksLeft()}회 남음)", fontSize = 22.sp) }
-                OutlinedButton(
-                    onClick = { confirmEnd = true },
-                    shape = RoundedCornerShape(28.dp),
-                    modifier = Modifier.height(72.dp),
-                ) { Text("공부 끝내기", fontSize = 22.sp) }
-            }
-        }
-    }
+        },
+    )
 
     if (confirmEnd) {
         AlertDialog(

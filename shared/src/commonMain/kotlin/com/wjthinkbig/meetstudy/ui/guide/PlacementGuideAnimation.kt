@@ -90,7 +90,7 @@ private fun seg(t: Float, a: Int, b: Int) = ((t - a) / (b - a)).coerceIn(0f, 1f)
  * The view fan, angle band, check/cross marks and captions are drawn here, not in the art.
  */
 @Composable
-fun PlacementGuideAnimation(modifier: Modifier = Modifier) {
+fun PlacementGuideAnimation(modifier: Modifier = Modifier, compact: Boolean = false) {
     val t by rememberInfiniteTransition(label = "guide").animateFloat(
         initialValue = 0f,
         targetValue = CYCLE_MS.toFloat(),
@@ -101,7 +101,7 @@ fun PlacementGuideAnimation(modifier: Modifier = Modifier) {
     val local = t - step.startMs
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(28.dp)).background(Paper),
+            Modifier.weight(1f, fill = false).aspectRatio(4f / 3f, matchHeightConstraintsFirst = true).clip(RoundedCornerShape(28.dp)).background(Paper),
             contentAlignment = Alignment.Center,
         ) {
             val fadeIn = seg(local, 0, 250)
@@ -121,7 +121,7 @@ fun PlacementGuideAnimation(modifier: Modifier = Modifier) {
         }
         Text(
             step.caption,
-            fontSize = 22.sp,
+            fontSize = if (compact) 17.sp else 22.sp,
             fontWeight = FontWeight.SemiBold,
             color = if (step.scene == Scene.Bad) Bad else Ink,
             textAlign = TextAlign.Center,
