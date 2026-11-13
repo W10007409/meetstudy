@@ -25,6 +25,7 @@ class FocusStateMachine(
     private var appLeft = false
     private var onBreak = false
     private var lastFrameMs: Long? = null
+    private var drowsyByEyes = false // which DROWSY rule fired last; they wait different times
 
     /** What the current frames point to, before its threshold makes it the state; null when nothing differs. */
     val pending: FocusState? get() = candidate?.takeIf { it != state }
@@ -95,7 +96,7 @@ class FocusStateMachine(
     private fun thresholdMs(k: FocusState) = when (k) {
         FocusState.AWAY -> config.awayMs
         FocusState.PHONE -> config.phoneMs
-        FocusState.DROWSY -> config.drowsyMs
+        FocusState.DROWSY -> if (drowsyByEyes) config.eyesClosedMs else config.drowsyMs
         FocusState.CAMERA_GAZE -> config.cameraGazeMs
         else -> config.lookAwayMs
     }
@@ -115,7 +116,8 @@ class FocusStateMachine(
         // Eye-open probability drops when the face points down (reading), so only trust it with the head up.
         val headDown = s.pitch?.let { it < -config.eyesRulePitchDownMaxDeg } == true
         val eyesClosed = !headDown && s.eyesOpenProb?.let { it < config.eyesClosedProb } == true
-        if (eyesClosed || (!s.faceVisible && s.personVisible && s.noseBelowShoulders == true)) return FocusState.DROWSY
+        if (eyesClosed) { drowsyByEyes = true; return FocusState.DROWSY }
+        if (!s.faceVisible && s.personVisible && s.noseBelowShoulders == true) { drowsyByEyes = false; return FocusState.DROWSY }
         val y = s.yaw; val p = s.pitch
         if (s.faceVisible && y != null && p != null) {
             if (isCameraGaze(y, p, config.cameraGazeDeg)) return FocusState.CAMERA_GAZE

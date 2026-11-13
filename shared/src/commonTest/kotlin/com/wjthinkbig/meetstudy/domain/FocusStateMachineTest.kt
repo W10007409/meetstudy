@@ -71,9 +71,16 @@ class FocusStateMachineTest {
         assertEquals(StateChange(FocusState.LOOKING_AWAY, 0), m.onFrame(frame(15_000, yaw = base.yaw + 36)))
     }
 
-    @Test fun eyesClosed20sIsDrowsy() {
+    @Test fun eyesClosed5sIsDrowsy() {
         val m = sm()
-        assertEquals(listOf(StateChange(FocusState.DROWSY, 0)), m.feed(0, 20_000) { frame(it, pitch = -5f, eyes = 0.1f) })
+        assertEquals(emptyList(), m.feed(0, 4_900) { frame(it, pitch = -5f, eyes = 0.1f) })
+        assertEquals(StateChange(FocusState.DROWSY, 0), m.onFrame(frame(5_000, pitch = -5f, eyes = 0.1f)))
+    }
+
+    @Test fun blinksAreNotDrowsy() {
+        val m = sm()
+        // Eyes shut 300 ms out of every 3 s for a minute.
+        assertEquals(emptyList(), m.feed(0, 60_000) { frame(it, pitch = -5f, eyes = if (it % 3_000 < 300) 0.1f else 0.9f) })
     }
 
     @Test fun headDownOnDesk20sIsDrowsy() {

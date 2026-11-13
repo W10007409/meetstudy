@@ -3,7 +3,8 @@ package com.wjthinkbig.meetstudy.domain
 data class DetectionConfig(
     val awayMs: Long = 10_000,
     val lookAwayMs: Long = 15_000,
-    val drowsyMs: Long = 20_000,
+    val drowsyMs: Long = 20_000, // head down on the desk, face hidden
+    val eyesClosedMs: Long = 5_000, // eyes seen closed: blinks are far shorter, 5 s is dozing
     val phoneMs: Long = 10_000,
     val yawLimitDeg: Float = 35f,
     val pitchUpLimitDeg: Float = 25f,
