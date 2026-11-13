@@ -37,6 +37,7 @@ import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseLandmark
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.wjthinkbig.meetstudy.domain.FaceBox
 import com.wjthinkbig.meetstudy.domain.FrameSignals
 import com.wjthinkbig.meetstudy.domain.IDENTITY_THRESHOLD
 import com.wjthinkbig.meetstudy.domain.cosine
@@ -163,7 +164,14 @@ actual fun rememberFrameSource(enablePhone: Boolean): FrameSource {
                     }
                     if (phoneDetector == null || phoneDetector.disabled || !base.personVisible) phoneVisible = false
                     // ponytail: no hand-proximity check; add MediaPipe HandLandmarker if false positives are common
-                    source.flow.tryEmit(base.copy(identityMatch = identityMatch, phoneVisible = phoneVisible))
+                    val box = face?.boundingBox?.let { b ->
+                        // ML Kit boxes are in upright coords; swap dims when the sensor is rotated.
+                        val rotated = proxy.imageInfo.rotationDegrees % 180 != 0
+                        val w = (if (rotated) proxy.height else proxy.width).toFloat()
+                        val h = (if (rotated) proxy.width else proxy.height).toFloat()
+                        FaceBox(b.exactCenterX() / w, b.exactCenterY() / h, b.height() / h)
+                    }
+                    source.flow.tryEmit(base.copy(identityMatch = identityMatch, phoneVisible = phoneVisible, faceBox = box))
                 } catch (e: Exception) {
                     // Drop this frame; a detector failure must not kill the analyzer.
                     Log.w(TAG, "frame dropped: " + e.javaClass.simpleName)

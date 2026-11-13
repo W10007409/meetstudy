@@ -10,6 +10,7 @@ data class FrameSignals(
     val personVisible: Boolean, // upper body; only meaningful when no face
     val noseBelowShoulders: Boolean?, // head-down-on-desk signal
     val phoneVisible: Boolean,
+    val faceBox: FaceBox? = null, // only set by sources that know the face position
 )
 
 data class Baseline(val yaw: Float, val pitch: Float)
