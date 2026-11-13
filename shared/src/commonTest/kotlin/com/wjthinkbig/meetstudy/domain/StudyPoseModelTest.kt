@@ -62,3 +62,15 @@ class StudyPoseModelTest {
         assertTrue(restored.isStudyPose(30f, -25f))
     }
 }
+
+class StudyPoseModelResetTest {
+    @Test
+    fun resetForgetsOldCameraSpot() {
+        val m = StudyPoseModel().apply { seed(Baseline(30f, -25f)) }
+        repeat(180) { m.observe(-45f, 10f, 1_000) }
+        m.reset(Baseline(-10f, -30f))
+        assertEquals(1, m.clusters.size)
+        assertTrue(m.isStudyPose(-10f, -30f))
+        assertFalse(m.isStudyPose(-45f, 40f))
+    }
+}

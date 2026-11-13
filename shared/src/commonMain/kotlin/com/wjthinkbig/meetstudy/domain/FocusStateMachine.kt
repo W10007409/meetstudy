@@ -11,6 +11,9 @@ class FocusStateMachine(
 ) {
     init { poses.seed(baseline) }
 
+    /** The camera was moved: re-anchor the study pose. */
+    fun recalibrate(b: Baseline) = poses.reset(b)
+
     var state: FocusState = FocusState.STUDYING
         private set
 

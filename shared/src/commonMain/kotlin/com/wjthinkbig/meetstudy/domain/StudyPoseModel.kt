@@ -31,6 +31,9 @@ class StudyPoseModel(initial: List<PoseCluster> = emptyList(), private val confi
         list += PoseCluster(b.yaw, b.pitch, 0, trusted = true)
     }
 
+    /** Camera moved: every learned direction is relative to the old camera spot, so start over from [b]. */
+    fun reset(b: Baseline) { list.clear(); seed(b) }
+
     /** Inside the old fixed envelope (yaw +-35, pitch -40..+25) around any trusted direction. */
     fun isStudyPose(yaw: Float, pitch: Float): Boolean = list.any { c ->
         val d = pitch - c.pitch

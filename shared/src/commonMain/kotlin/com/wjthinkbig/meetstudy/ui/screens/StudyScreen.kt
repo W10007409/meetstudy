@@ -50,6 +50,8 @@ import com.wjthinkbig.meetstudy.domain.StudySession
 import com.wjthinkbig.meetstudy.platform.CameraPreview
 import com.wjthinkbig.meetstudy.platform.FrameSource
 import com.wjthinkbig.meetstudy.platform.KeepScreenOn
+import com.wjthinkbig.meetstudy.platform.DeviceMoveWatcher
+import androidx.compose.runtime.mutableIntStateOf
 import com.wjthinkbig.meetstudy.platform.PlatformBackHandler
 import com.wjthinkbig.meetstudy.platform.monotonicNowMs
 import com.wjthinkbig.meetstudy.ui.theme.OfflineColor
@@ -120,6 +122,8 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     var saveFailed by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
+    var moves by remember { mutableIntStateOf(0) }
+    var recalibrating by remember { mutableStateOf(false) }
 
     // Segments live in [ended] until a save succeeds, so a failed write never loses the session.
     fun save(e: Ended) {
@@ -155,6 +159,14 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     }
 
     KeepScreenOn()
+    // The tablet was moved to a new spot: re-anchor the study pose to where the camera is now.
+    DeviceMoveWatcher { if (ended == null) moves++ }
+    LaunchedEffect(moves) {
+        if (moves == 0) return@LaunchedEffect
+        recalibrating = true
+        machine.recalibrate(calibrate(source))
+        recalibrating = false
+    }
     PlatformBackHandler { if (ended == null) confirmEnd = true }
 
     LaunchedEffect(source) {
@@ -222,7 +234,8 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
                     color = if (cameraStale) OfflineColor else color,
                 )
                 val p = pending
-                if (p != null && !cameraStale && !onBreak) {
+                if (recalibrating) StatusChip("카메라가 움직였어요 · 위치를 다시 잡는 중", Color(0xFF1F8A82))
+                else if (p != null && !cameraStale && !onBreak) {
                     StatusChip("${pendingLabel(p.state)} · ${secondsUntil(p.dueMs, now)}초", Color.Black.copy(alpha = 0.6f))
                 }
             }
