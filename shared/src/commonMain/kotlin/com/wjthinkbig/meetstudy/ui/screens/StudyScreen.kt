@@ -110,6 +110,7 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     val store = remember { SessionStore(appFilesDir()) }
     val watch = remember { FrameWatch(startMs) }
     val state by session.state.collectAsState()
+    val pending by session.pending.collectAsState()
     var now by remember { mutableLongStateOf(startMs) }
     var breakStartMs by remember { mutableLongStateOf(0L) }
     var ended by remember { mutableStateOf<Ended?>(null) }
@@ -206,51 +207,63 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-            CameraPreview(Modifier.size(120.dp).clip(RoundedCornerShape(20.dp)))
-            Surface(shape = RoundedCornerShape(50), color = Color(0xFFEFF1F4)) {
+        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(28.dp)).background(Color.Black)) {
+            CameraPreview(Modifier.fillMaxSize())
+            Column(Modifier.align(Alignment.TopStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusChip(
+                    text = when {
+                        cameraStale -> "카메라를 확인해 주세요"
+                        onBreak -> "${stateLabel(state)} · 남은 휴식 ${formatClock(BREAK_MS - (now - breakStartMs))}"
+                        else -> stateLabel(state)
+                    },
+                    color = if (cameraStale) OfflineColor else color,
+                )
+                val p = pending
+                if (p != null && !cameraStale && !onBreak) {
+                    StatusChip("${pendingLabel(p.state)} · ${secondsUntil(p.dueMs, now)}초", Color.Black.copy(alpha = 0.6f))
+                }
+            }
+            Surface(Modifier.align(Alignment.TopEnd).padding(16.dp), shape = RoundedCornerShape(50), color = Color(0xCCEFF1F4)) {
                 Text("충전기를 연결해 주세요", fontSize = 14.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
             }
         }
-        Banner(
-            text = when {
-                cameraStale -> "카메라를 확인해 주세요"
-                onBreak -> "${stateLabel(state)} · 남은 휴식 ${formatClock(BREAK_MS - (now - breakStartMs))}"
-                else -> stateLabel(state)
-            },
-            color = if (cameraStale) OfflineColor else color,
-        )
-        Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(
-                progress = { (focused.toFloat() / goalMs).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxSize(),
-                color = color,
-                strokeWidth = 20.dp,
-                trackColor = Color(0xFFE6E9ED),
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatClock(goalMs - focused), fontSize = 64.sp)
-                Text("순공부 ${formatClock(focused, alwaysHours = true)}", fontSize = 18.sp)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(240.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { (focused.toFloat() / goalMs).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxSize(),
+                    color = color,
+                    strokeWidth = 18.dp,
+                    trackColor = Color(0xFFE6E9ED),
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(formatClock(goalMs - focused), fontSize = 52.sp)
+                    Text("순공부 ${formatClock(focused, alwaysHours = true)}", fontSize = 16.sp)
+                }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Button(
-                onClick = {
-                    val t = monotonicNowMs()
-                    if (onBreak) session.endBreak(t)
-                    else if (session.startBreak(t)) breakStartMs = t
-                    now = t
-                },
-                enabled = onBreak || session.breaksLeft() > 0,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = stateColor(FocusState.BREAK)),
-                modifier = Modifier.height(72.dp),
-            ) { Text(if (onBreak) "휴식 끝내기" else "휴식 (${session.breaksLeft()}회 남음)", fontSize = 22.sp) }
-            OutlinedButton(
-                onClick = { confirmEnd = true },
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.height(72.dp),
-            ) { Text("공부 끝내기", fontSize = 22.sp) }
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = {
+                        val t = monotonicNowMs()
+                        if (onBreak) session.endBreak(t)
+                        else if (session.startBreak(t)) breakStartMs = t
+                        now = t
+                    },
+                    enabled = onBreak || session.breaksLeft() > 0,
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = stateColor(FocusState.BREAK)),
+                    modifier = Modifier.height(72.dp),
+                ) { Text(if (onBreak) "휴식 끝내기" else "휴식 (${session.breaksLeft()}회 남음)", fontSize = 22.sp) }
+                OutlinedButton(
+                    onClick = { confirmEnd = true },
+                    shape = RoundedCornerShape(28.dp),
+                    modifier = Modifier.height(72.dp),
+                ) { Text("공부 끝내기", fontSize = 22.sp) }
+            }
         }
     }
 
@@ -265,10 +278,20 @@ fun StudyScreen(source: FrameSource, goalMs: Long, baseline: Baseline, onFinishe
     }
 }
 
+/** Seconds left until a pending state is recorded, never below 0. */
+internal fun secondsUntil(dueMs: Long, nowMs: Long): Long = maxOf(0L, (dueMs - nowMs + 999) / 1000)
+
+private fun pendingLabel(s: FocusState) = when (s) {
+    FocusState.AWAY -> "자리를 비운 것 같아요"
+    FocusState.LOOKING_AWAY -> "딴 곳을 보고 있어요"
+    FocusState.DROWSY -> "졸린 것 같아요"
+    FocusState.PHONE -> "폰이 보여요"
+    else -> "확인 중"
+}
+
 @Composable
-private fun Banner(text: String, color: Color) {
-    Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(color).padding(vertical = 18.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(text, fontSize = 30.sp, color = Color.White) }
+private fun StatusChip(text: String, color: Color) {
+    Box(Modifier.clip(RoundedCornerShape(50)).background(color).padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(text, fontSize = 18.sp, color = Color.White)
+    }
 }

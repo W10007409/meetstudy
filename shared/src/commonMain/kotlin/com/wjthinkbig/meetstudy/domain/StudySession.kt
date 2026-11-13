@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Segment(val state: FocusState, val startMs: Long, val endMs: Long)
 
+data class Pending(val state: FocusState, val dueMs: Long)
+
 data class BreakPolicy(val maxCount: Int = 3, val maxMinutesEach: Int = 10)
 
 /** Turns the machine's StateChanges into contiguous Segments and adds goal/break bookkeeping. */
@@ -18,6 +20,8 @@ class StudySession(
 ) {
     private val _state = MutableStateFlow(machine.state)
     val state: StateFlow<FocusState> = _state
+    private val _pending = MutableStateFlow<Pending?>(null)
+    val pending: StateFlow<Pending?> = _pending
 
     private val closed = mutableListOf<Segment>()
     private var openState = machine.state
@@ -75,6 +79,7 @@ class StudySession(
             openStart = maxOf(change.startedAtMs, openStart)
         }
         _state.value = machine.state
+        _pending.value = machine.pending?.let { Pending(it, machine.pendingDueMs) }
     }
 
     private fun close(endMs: Long) {

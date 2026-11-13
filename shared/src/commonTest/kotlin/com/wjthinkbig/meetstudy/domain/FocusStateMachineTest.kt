@@ -22,6 +22,18 @@ class FocusStateMachineTest {
     private fun FocusStateMachine.feed(fromMs: Long, toMs: Long, f: (Long) -> FrameSignals): List<StateChange> =
         (fromMs..toMs step 500).mapNotNull { onFrame(f(it)) }
 
+    @Test fun pendingShowsCandidateBeforeThreshold() {
+        val m = sm()
+        m.onFrame(studying(0))
+        assertNull(m.pending)
+        m.feed(500, 3_000) { noFace(it) }
+        assertEquals(FocusState.AWAY, m.pending)
+        assertEquals(10_500, m.pendingDueMs)
+        m.feed(3_500, 10_500) { noFace(it) }
+        assertEquals(FocusState.AWAY, m.state)
+        assertNull(m.pending)
+    }
+
     @Test fun awayAfterTenSecondsIsRetroactive() {
         val m = sm()
         assertEquals(emptyList(), m.feed(0, 9_500) { noFace(it) })

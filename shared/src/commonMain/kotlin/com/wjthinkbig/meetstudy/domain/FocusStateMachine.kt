@@ -14,6 +14,12 @@ class FocusStateMachine(private val baseline: Baseline, private val config: Dete
     private var appLeft = false
     private var onBreak = false
 
+    /** What the current frames point to, before its threshold makes it the state; null when nothing differs. */
+    val pending: FocusState? get() = candidate?.takeIf { it != state }
+
+    /** When [pending] becomes the state if it persists. Only meaningful while [pending] is non-null. */
+    val pendingDueMs: Long get() = candidateSince + (candidate?.let(::thresholdMs) ?: 0L)
+
     fun onFrame(s: FrameSignals): StateChange? {
         if (state == FocusState.APP_LEFT || state == FocusState.BREAK) return null
         s.identityMatch?.let { identityMatch = it }
