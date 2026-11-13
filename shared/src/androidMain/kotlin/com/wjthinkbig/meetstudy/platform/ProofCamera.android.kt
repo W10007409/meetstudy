@@ -51,6 +51,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.wjthinkbig.meetstudy.domain.AutoCaptureGate
+import com.wjthinkbig.meetstudy.domain.looksLikeDocument
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -64,7 +65,10 @@ private const val MIN_CHARS = 10
 private val GREEN = Color(0xFF4CAF50)
 
 /** Upright analysis-frame size and the quad found in it (image pixels); null quad = nothing found. */
-private class Overlay(val imgW: Int, val imgH: Int, val quad: FloatArray?, val progress: Float, val chars: Int)
+private class Overlay(val imgW: Int, val imgH: Int, val quad: FloatArray?, val progress: Float, val ready: Boolean)
+
+/** Recognized text counted for the gate: characters and the union of their boxes (image pixels), or null box if none. */
+private class TextStats(val chars: Int, val box: android.graphics.Rect?)
 
 private fun uprightFrom(proxy: ImageProxy): Bitmap {
     val src = proxy.toBitmap()
@@ -107,11 +111,12 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
         val capturing = AtomicBoolean(false)
         val disposed = AtomicBoolean(false)
         // Analysis-space quad + frame size, the fallback if full-res detection fails.
-        class Last(val quad: FloatArray, val w: Int, val h: Int)
+        // fromText = the page edges were out of frame and the quad is the text bounds; full-res edge search is skipped then.
+        class Last(val quad: FloatArray, val w: Int, val h: Int, val fromText: Boolean)
         val last = AtomicReference<Last?>(null)
         var lastFrameMs = 0L
         var lastOcrMs = 0L
-        var chars = 0
+        var text = TextStats(0, null)
 
         fun finish(path: String?) {
             ContextCompat.getMainExecutor(context).execute {
@@ -125,10 +130,11 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                 val t0 = SystemClock.elapsedRealtime()
                 val bmp = try { uprightFrom(image) } finally { image.close() }
                 val fallback = last.get()
-                val q = QuadDetector.find(bmp) ?: fallback?.let { f ->
+                val scaled = fallback?.let { f ->
                     val sx = bmp.width.toFloat() / f.w; val sy = bmp.height.toFloat() / f.h
                     FloatArray(8) { f.quad[it] * (if (it % 2 == 0) sx else sy) }
                 }
+                val q = if (fallback?.fromText == true) scaled else QuadDetector.find(bmp) ?: scaled
                 if (q == null) { bmp.recycle(); return finish(null) }
                 val warped = try { QuadDetector.warp(bmp, q) } finally { bmp.recycle() }
                 val file = File(context.filesDir, "proofs").apply { mkdirs() }.resolve("$sessionId.jpg")
@@ -165,21 +171,24 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
                     try {
                         val q = QuadDetector.find(bmp)
                         Log.d(TAG, "quad ms=${SystemClock.elapsedRealtime() - now} found=${q != null} frame=${bmp.width}x${bmp.height}")
-                        if (q == null) {
-                            chars = 0; lastOcrMs = 0
-                        } else if (now - lastOcrMs >= OCR_GAP_MS) {
+                        // OCR runs with or without edges: up close the page edges leave the frame but the text is clearest.
+                        if (now - lastOcrMs >= OCR_GAP_MS) {
                             lastOcrMs = now
                             val t = SystemClock.elapsedRealtime()
-                            chars = try {
-                                countChars(Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)), 2, TimeUnit.SECONDS), q)
+                            text = try {
+                                textStats(Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)), 2, TimeUnit.SECONDS), q)
                             } catch (e: Exception) {
-                                Log.w(TAG, "ocr failed: " + e.javaClass.simpleName); 0
+                                Log.w(TAG, "ocr failed: " + e.javaClass.simpleName); TextStats(0, null)
                             }
-                            Log.d(TAG, "ocr ms=${SystemClock.elapsedRealtime() - t} chars=$chars")
+                            Log.d(TAG, "ocr ms=${SystemClock.elapsedRealtime() - t} chars=${text.chars} box=${text.box}")
                         }
-                        val progress = gate.onFrame(now, q != null, chars)
-                        overlay = Overlay(bmp.width, bmp.height, q, progress, chars)
-                        if (q != null) last.set(Last(q, bmp.width, bmp.height))
+                        val areaFrac = text.box?.let { it.width().toFloat() * it.height() / (bmp.width * bmp.height) } ?: 0f
+                        val ready = looksLikeDocument(q != null, text.chars, areaFrac, MIN_CHARS)
+                        val textQuad = if (q == null && ready) text.box?.let { expandedRectQuad(it, bmp.width, bmp.height) } else null
+                        val shown = q ?: textQuad
+                        val progress = gate.onFrame(now, q != null, text.chars, areaFrac)
+                        overlay = Overlay(bmp.width, bmp.height, shown, progress, ready)
+                        if (shown != null) last.set(Last(shown, bmp.width, bmp.height, fromText = q == null))
                         if (progress >= 1f && capturing.compareAndSet(false, true)) {
                             shot = true
                             ContextCompat.getMainExecutor(context).execute {
@@ -216,7 +225,7 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
     Box(Modifier.fillMaxSize()) {
         AndroidView(modifier = Modifier.fillMaxSize(), factory = { PreviewView(it).apply { this.controller = controller } })
         val o = overlay
-        val ready = o?.quad != null && o.chars >= MIN_CHARS
+        val ready = o?.ready == true
         Canvas(Modifier.fillMaxSize()) {
             if (o == null) return@Canvas
             // PreviewView default FILL_CENTER: uniform scale to cover, centered.
@@ -237,9 +246,9 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
         }
         val hint = when {
             shot -> "찰칵!"
-            o?.quad == null -> "문제집을 네모 안에 담아 주세요"
-            !ready -> "글자가 잘 보이게 가까이"
-            else -> "그대로 가만히 있어요"
+            ready -> "그대로 가만히 있어요"
+            o?.quad == null -> "공부한 문제집이나 책을 비춰 주세요"
+            else -> "글자가 잘 보이게 조금 더 가까이"
         }
         Text(hint, color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.TopCenter).padding(24.dp).background(Color(0x99000000)).padding(12.dp))
         CancelButton(onCancel)
@@ -250,13 +259,29 @@ actual fun ProofCamera(sessionId: String, onCaptured: (photoPath: String) -> Uni
 private fun BoxScope.CancelButton(onCancel: () -> Unit) =
     Button(onClick = onCancel, modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp)) { Text("다음에 할게요", fontSize = 20.sp) }
 
-/** Non-whitespace characters of recognized elements whose centers lie inside the quad's bounding box. */
-private fun countChars(text: com.google.mlkit.vision.text.Text, quad: FloatArray): Int {
-    val xs = listOf(quad[0], quad[2], quad[4], quad[6]); val ys = listOf(quad[1], quad[3], quad[5], quad[7])
-    val l = xs.min(); val r = xs.max(); val t = ys.min(); val b = ys.max()
-    return text.textBlocks.flatMap { it.lines }.flatMap { it.elements }
-        .filter { e -> e.boundingBox?.let { it.centerX() >= l && it.centerX() <= r && it.centerY() >= t && it.centerY() <= b } == true }
-        .sumOf { e -> e.text.count { !it.isWhitespace() } }
+/** Counts non-whitespace characters of recognized elements (inside [quad]'s bounding box when given) and unions their boxes. */
+private fun textStats(text: com.google.mlkit.vision.text.Text, quad: FloatArray?): TextStats {
+    val xs = quad?.let { listOf(it[0], it[2], it[4], it[6]) }
+    val ys = quad?.let { listOf(it[1], it[3], it[5], it[7]) }
+    fun inside(r: android.graphics.Rect) = xs == null || ys == null ||
+        (r.centerX() >= xs.min() && r.centerX() <= xs.max() && r.centerY() >= ys.min() && r.centerY() <= ys.max())
+    var chars = 0
+    var box: android.graphics.Rect? = null
+    for (e in text.textBlocks.flatMap { it.lines }.flatMap { it.elements }) {
+        val bb = e.boundingBox ?: continue
+        if (!inside(bb)) continue
+        chars += e.text.count { !it.isWhitespace() }
+        box = box?.apply { union(bb) } ?: android.graphics.Rect(bb)
+    }
+    return TextStats(chars, box)
+}
+
+/** Text bounds grown by 6% per side (page margins), clipped to the frame, as a TL,TR,BR,BL quad. */
+private fun expandedRectQuad(r: android.graphics.Rect, w: Int, h: Int): FloatArray {
+    val dx = r.width() * 0.06f; val dy = r.height() * 0.06f
+    val l = maxOf(0f, r.left - dx); val t = maxOf(0f, r.top - dy)
+    val rr = minOf(w.toFloat(), r.right + dx); val b = minOf(h.toFloat(), r.bottom + dy)
+    return floatArrayOf(l, t, rr, t, rr, b, l, b)
 }
 
 actual fun logProof(msg: String) { Log.w(TAG, msg) }
