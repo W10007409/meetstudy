@@ -6,10 +6,14 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
 }
 
+val IOS_FRAMEWORKS = listOf("AVFoundation", "Vision", "VisionKit", "CoreMotion")
+
 kotlin {
     androidTarget()
     listOf(iosArm64(), iosSimulatorArm64()).forEach {
         it.binaries.framework { baseName = "Shared"; isStatic = true }
+        // Test executables do not auto-link these; the app links them in iosApp/project.yml.
+        it.binaries.all { linkerOpts(IOS_FRAMEWORKS.flatMap { f -> listOf("-framework", f) }) }
     }
 
     sourceSets {
