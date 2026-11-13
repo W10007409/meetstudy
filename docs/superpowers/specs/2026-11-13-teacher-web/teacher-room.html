@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>선생님 · 방</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F5F7F6; --sheet: #FFFFFF; --ink: #18212B; --ink-2: #56626F; --ink-3: #9AA5B1;
+    --rule: #E3E8E6; --teal: #1F8A82; --hi: #FFE45C;
+    --study: #4CC38A; --away: #9AA3AE; --off: #FF9F43; --rest: #5AA9FF; --offline: #FF6B6B;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans KR", system-ui, sans-serif; }
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+
+  nav { border-right: 1px solid var(--rule); padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; }
+  nav .who { font-size: 14px; color: var(--ink-2); margin: 0 8px 20px; }
+  nav .who b { display: block; color: var(--ink); font-size: 17px; }
+  nav h2 { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 8px 8px 6px; }
+  nav button { font: inherit; text-align: left; border: 0; background: none; color: var(--ink); padding: 10px 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  nav button small { color: var(--ink-3); font-size: 13px; }
+  nav button[aria-current="true"] { background: var(--ink); color: #fff; }
+  nav button[aria-current="true"] small { color: #B7C0C9; }
+  nav button.closed { color: var(--ink-3); }
+  nav .new { color: var(--teal); font-weight: 600; }
+  nav .spacer { flex: 1; }
+  nav button:focus-visible, .actions button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+  main { padding: 24px 28px 40px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .head h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+  .head p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+  .actions { display: flex; gap: 8px; }
+  .actions button { font: inherit; font-size: 14px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+  .actions .primary { background: var(--teal); border-color: var(--teal); color: #fff; font-weight: 600; }
+  .actions .danger { color: #B42318; }
+
+  .pulse { display: flex; gap: 22px; margin: 0 0 18px; font-size: 14px; color: var(--ink-2); }
+  .pulse b { color: var(--ink); font-size: 20px; margin-right: 4px; font-variant-numeric: tabular-nums; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .tile { background: var(--sheet); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 0 var(--rule), 0 10px 28px -20px rgba(24,33,43,.3); position: relative; }
+  .tile .video { aspect-ratio: 16/10; background: #222B33; display: grid; place-items: center; color: #6E7A86; font-size: 13px; }
+  .tile .body { padding: 12px 14px 14px; }
+  .tile .name { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .tile .name b { font-size: 16px; }
+  .badge { font-size: 12px; font-weight: 600; color: #fff; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .tile .time { font-size: 13px; color: var(--ink-2); margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+  .tile .time b { color: var(--ink); font-size: 15px; }
+  .strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; }
+  .strip .fill { display: flex; height: 12px; border-radius: 3px; overflow: hidden; background: #EEF2F1; }
+  .strip .fill i { flex: 1; }
+  .strip-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+  .tile.away .video { box-shadow: inset 0 0 0 3px var(--away); }
+  .tile.off .video { box-shadow: inset 0 0 0 3px var(--off); }
+  .tile.offline .video { background: #2C2326; color: #C7898E; }
+  .empty { border: 1.5px dashed #CBD3D0; border-radius: 16px; display: grid; place-items: center; color: var(--ink-3); font-size: 14px; min-height: 220px; background: none; font: inherit; cursor: pointer; }
+  .empty:hover { color: var(--teal); border-color: var(--teal); }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    nav { border-right: 0; border-bottom: 1px solid var(--rule); flex-direction: row; overflow-x: auto; padding: 12px 16px; }
+    nav .who, nav h2, nav .spacer { display: none; }
+    nav button { white-space: nowrap; }
+    main { padding: 20px 16px 32px; }
+    .grid { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="내 방">
+    <p class="who"><b>김선생님</b>수학 · 학생 9명 연결됨</p>
+    <h2>열린 방</h2>
+    <button aria-current="true">중2 수학반 <small>5명</small></button>
+    <button>초6 영어반 <small>3명</small></button>
+    <h2>닫힌 방</h2>
+    <button class="closed">주말 자습 <small>어제</small></button>
+    <button class="new">+ 방 만들기</button>
+    <div class="spacer"></div>
+    <button>학생 연결 관리 <small>요청 1</small></button>
+    <button>학생 리포트</button>
+  </nav>
+
+  <main>
+    <div class="head">
+      <div>
+        <h1>중2 수학반</h1>
+        <p>1시간 12분째 열려 있어요. 자리 비움은 10초, 휴식은 3번까지 10분씩이에요.</p>
+      </div>
+      <div class="actions">
+        <button class="primary">학생 초대</button>
+        <button>방 설정</button>
+        <button class="danger">방 닫기</button>
+      </div>
+    </div>
+
+    <div class="pulse">
+      <span><b>3</b>명 공부 중</span><span><b>1</b>명 딴짓</span><span><b>1</b>명 오프라인</span>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<script>
+  const C = { study: 'var(--study)', off: 'var(--off)', away: 'var(--away)', rest: 'var(--rest)' };
+  // Students in this room; strip = this hour, minute by minute (null = not yet / not here).
+  const kids = [
+    { n: '김하늘', st: '공부 중', c: 'var(--study)', cls: '', f: '37분', g: 60, segs: [[0, 22, 'study'], [22, 25, 'off'], [25, 41, 'study']] },
+    { n: '이준', st: '다른 곳 봄 · 12초째', c: 'var(--off)', cls: 'off', f: '24분', g: 60, segs: [[0, 18, 'study'], [18, 21, 'off'], [21, 40, 'study'], [40, 41, 'off']] },
+    { n: '박서연', st: '휴식 · 4분 남음', c: 'var(--rest)', cls: '', f: '45분', g: 60, segs: [[0, 35, 'study'], [35, 41, 'rest']] },
+    { n: '최민', st: '자리 비움', c: 'var(--away)', cls: 'away', f: '12분', g: 60, segs: [[0, 12, 'study'], [12, 41, 'away']] },
+    { n: '정우', st: '오프라인', c: 'var(--offline)', cls: 'offline', f: '8분', g: 40, segs: [[0, 8, 'study']] },
+  ];
+  const at = (segs, m) => (segs.find(s => m >= s[0] && m < s[1]) || [])[2];
+  const strip = segs => [0, 1, 2, 3, 4, 5].map(c => '<div class="fill">' +
+    Array.from({ length: 10 }, (_, k) => { const s = at(segs, c * 10 + k); return `<i style="background:${s ? C[s] : 'transparent'}"></i>`; }).join('') + '</div>').join('');
+  document.getElementById('grid').innerHTML = kids.map(k => `
+    <article class="tile ${k.cls}">
+      <div class="video">${k.cls === 'offline' ? '연결이 끊겼어요' : '영상은 3단계에서 연결돼요'}</div>
+      <div class="body">
+        <div class="name"><b>${k.n}</b><span class="badge" style="background:${k.c}">${k.st}</span></div>
+        <div class="time"><b>${k.f}</b> 공부했어요 · 목표 ${k.g}분</div>
+        <div class="strip">${strip(k.segs)}</div>
+        <div class="strip-label"><span>3시</span><span>3시 50분</span></div>
+      </div>
+    </article>`).join('') + '<button class="empty">+ 학생 초대하기 (1자리 남음)</button>';
+</script>
+</body>
+</html>
