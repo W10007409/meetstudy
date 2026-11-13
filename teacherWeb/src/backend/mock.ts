@@ -36,7 +36,7 @@ function fakeSegments(rand: () => number, startMs: number, lengthMin: number): S
     out.push({ state: 'STUDYING', startMs: t, endMs: Math.min(end, t + study) })
     t += study
     if (t >= end) break
-    const isBreak = !breakUsed && rand() < 0.25
+    const isBreak: boolean = !breakUsed && rand() < 0.25
     breakUsed ||= isBreak
     const d = (isBreak ? 6 + rand() * 4 : 1 + rand() * 3) * MIN
     out.push({ state: isBreak ? 'BREAK' : DISTRACT[Math.floor(rand() * DISTRACT.length)], startMs: t, endMs: Math.min(end, t + d) })
