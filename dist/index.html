@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MeetStudy 설치</title>
-<meta name="description" content="카메라로 집중 시간을 재 주는 공부 앱 MeetStudy 테스트 버전 설치 페이지">
+<meta name="description" content="카메라로 집중 시간을 재 주는 공부 앱 MeetStudy 테스트 버전 설치 페이지 (Android, iPhone, iPad)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -36,20 +36,27 @@
   .hero img { width: 100%; border-radius: 28px; display: block; }
   h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.25; margin: 0 0 12px; font-weight: 800; }
   .lead { color: var(--ink-soft); font-size: 17px; margin: 0 0 24px; }
+  .buttons { display: flex; flex-direction: column; gap: 12px; max-width: 420px; }
   .dl {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: var(--teal); color: #fff; text-decoration: none; font-weight: 800; font-size: 20px;
-    border-radius: 999px; padding: 18px 28px; width: 100%; max-width: 420px;
+    text-decoration: none; font-weight: 800; font-size: 19px;
+    border-radius: 999px; padding: 16px 24px; width: 100%;
+    background: var(--teal-soft); color: var(--teal);
   }
-  .dl:hover { filter: brightness(1.08); }
-  .meta { font-size: 14px; color: var(--ink-soft); margin-top: 10px; }
+  .dl.primary { background: var(--teal); color: #fff; font-size: 20px; padding: 18px 28px; }
+  .dl:hover { filter: brightness(1.06); }
+  .dl svg { flex: none; }
+  .meta { font-size: 14px; color: var(--ink-soft); margin: -4px 0 0; text-align: center; }
+  .notice { background: var(--warn-bg); color: var(--warn); border-radius: 16px; padding: 12px 16px; font-size: 14px; margin: 0; }
   .badge { display: inline-block; background: var(--warn-bg); color: var(--warn); font-size: 13px; font-weight: 600; border-radius: 999px; padding: 3px 12px; margin-bottom: 14px; }
   section { margin-top: 48px; }
   h2 { font-size: 22px; margin: 0 0 16px; }
+  .steps section:first-child { margin-top: 48px; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
   .card .n { width: 32px; height: 32px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-weight: 800; display: grid; place-items: center; margin-bottom: 10px; }
-  .card b { display: block; margin-bottom: 4px; }
+  .card > b { display: block; margin-bottom: 4px; }
   .card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
   .qr { display: flex; gap: 20px; align-items: center; }
   .qr #qr { background: #fff; padding: 10px; border-radius: 16px; line-height: 0; flex: none; }
@@ -57,10 +64,11 @@
   ul.plain { margin: 0; padding-left: 20px; color: var(--ink-soft); }
   ul.plain li { margin: 4px 0; }
   footer { margin-top: 56px; font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 860px) { .grid.four { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 720px) {
     .hero { grid-template-columns: 1fr; }
     .hero img { order: -1; }
-    .grid { grid-template-columns: 1fr; }
+    .grid, .grid.four { grid-template-columns: 1fr; }
     .qr { flex-direction: column; align-items: flex-start; }
   }
 </style>
@@ -81,14 +89,22 @@
 
   <div class="hero">
     <div>
-      <span class="badge">테스트 버전 · Android 전용</span>
+      <span class="badge">테스트 버전 · Android · iPhone · iPad</span>
       <h1>문제집에 집중한 시간만<br>정확하게 재 줘요</h1>
       <p class="lead">태블릿을 책상 모서리에 세워 두면, 카메라가 공부하는 모습을 보고 순공부 시간을 기록해요. 다 끝나면 문제집을 찍어 인증하고 별을 받아요.</p>
-      <a class="dl" id="dl" href="meetstudy-0.1.0.apk" download>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
-        앱 다운로드 (APK)
-      </a>
-      <div class="meta">버전 0.1.0 · Android 8.0 이상 · <span id="size">약 160MB</span></div>
+      <div class="buttons" id="buttons">
+        <a class="dl primary" id="dl-android" href="meetstudy-0.1.0.apk" download>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          Android 앱 받기 (APK)
+        </a>
+        <p class="meta" id="meta-android">Android 8.0 이상 · <span id="size-android">약 160MB</span></p>
+        <a class="dl" id="dl-ios" href="#ios-steps">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          iPhone · iPad에 설치
+        </a>
+        <p class="meta" id="meta-ios">iOS 15 이상 · 등록된 기기만 · <span id="size-ios">약 11MB</span></p>
+        <p class="notice" id="ios-notice" hidden></p>
+      </div>
     </div>
     <img src="hero.jpg" alt="책상에서 문제집을 풀고, 옆에 태블릿이 거치대에 세워져 있는 학생">
   </div>
@@ -97,23 +113,35 @@
     <h2>태블릿으로 바로 받기</h2>
     <div class="qr">
       <div id="qr"></div>
-      <p class="lead" style="margin:0">설치할 태블릿이나 폰의 카메라로 QR 코드를 찍으면 이 페이지가 열려요. 거기서 <b>앱 다운로드</b>를 누르세요.</p>
+      <p class="lead" style="margin:0">설치할 태블릿이나 폰의 카메라로 QR 코드를 찍으면 이 페이지가 열려요. 기기에 맞는 설치 버튼이 맨 위에 나와요.</p>
     </div>
   </section>
 
-  <section>
-    <h2>설치 방법</h2>
-    <div class="grid">
-      <div class="card"><div class="n">1</div><b>APK 받기</b><p>설치할 기기에서 위 버튼을 눌러 파일을 받아요. Wi-Fi에서 받는 걸 권해요.</p></div>
-      <div class="card"><div class="n">2</div><b>설치 허용</b><p>"출처를 알 수 없는 앱" 안내가 나오면 <b>설정 → 이 출처 허용</b>을 켜요. Play 프로텍트 경고가 나오면 <b>무시하고 설치</b>를 눌러요.</p></div>
-      <div class="card"><div class="n">3</div><b>첫 실행</b><p>카메라 권한을 허용하고, 안내에 따라 얼굴을 등록하면 바로 시작할 수 있어요.</p></div>
-    </div>
-  </section>
+  <div class="steps" id="steps">
+    <section id="android-steps">
+      <h2>Android 설치 방법</h2>
+      <div class="grid">
+        <div class="card"><div class="n">1</div><b>APK 받기</b><p>설치할 기기에서 <b>Android 앱 받기</b>를 눌러 파일을 받아요. Wi-Fi에서 받는 걸 권해요.</p></div>
+        <div class="card"><div class="n">2</div><b>설치 허용</b><p>"출처를 알 수 없는 앱" 안내가 나오면 <b>설정 → 이 출처 허용</b>을 켜요. Play 프로텍트 경고가 나오면 <b>무시하고 설치</b>를 눌러요.</p></div>
+        <div class="card"><div class="n">3</div><b>첫 실행</b><p>카메라 권한을 허용하고, 안내에 따라 얼굴을 등록하면 바로 시작할 수 있어요.</p></div>
+      </div>
+    </section>
+
+    <section id="ios-steps">
+      <h2>iPhone · iPad 설치 방법</h2>
+      <div class="grid four">
+        <div class="card"><div class="n">1</div><b>기기 등록 확인</b><p>테스트 버전은 미리 등록된 기기에만 설치돼요. 처음 설치하는 기기라면 담당자에게 기기 등록을 먼저 요청하세요.</p></div>
+        <div class="card"><div class="n">2</div><b>Safari에서 설치</b><p>이 페이지를 <b>Safari</b>로 열고 <b>iPhone · iPad에 설치</b>를 눌러요. "설치하시겠습니까?"가 나오면 <b>설치</b>를 누르고, 홈 화면에서 내려받기가 끝날 때까지 기다려요.</p></div>
+        <div class="card"><div class="n">3</div><b>개발자 모드 켜기</b><p>iOS 16 이상이면 앱이 바로 열리지 않아요. <b>설정 → 개인정보 보호 및 보안 → 개발자 모드</b>를 켜고, 기기를 다시 시작한 뒤 <b>켜기</b>를 눌러요.</p></div>
+        <div class="card"><div class="n">4</div><b>첫 실행</b><p>카메라 권한을 허용해요. iOS에서는 얼굴 등록이 아직 꺼져 있어서, 첫 화면에서 <b>계속하기</b>를 누르면 바로 시작해요.</p></div>
+      </div>
+    </section>
+  </div>
 
   <section>
     <h2>준비물</h2>
     <ul class="plain">
-      <li>전면 카메라가 있는 Android 태블릿 (폰도 되지만 태블릿을 권해요)</li>
+      <li>전면 카메라가 있는 태블릿 (Android 태블릿 또는 iPad). 폰도 되지만 태블릿을 권해요</li>
       <li>태블릿 거치대, 충전기 (공부하는 동안 카메라가 계속 켜져 있어요)</li>
       <li>밝은 책상. 얼굴과 문제집이 함께 보이게, 팔 길이만큼 떨어뜨려 세워요</li>
     </ul>
@@ -133,6 +161,7 @@
     <ul class="plain">
       <li>공부 화면의 <b>인식 보기</b> 버튼으로 얼굴·뼈대 인식과 판정 숫자를 볼 수 있어요.</li>
       <li>판정 기준(졸음 5초, 자리 비움 10초 등)은 테스트하면서 계속 조정하고 있어요.</li>
+      <li>iPhone · iPad 버전은 아직 본인 확인과 폰 사용 감지가 꺼져 있어요. 공부 시간 측정과 문제집 인증은 똑같이 돼요.</li>
       <li>이전 버전이 있으면 지우지 않고 그대로 덮어 설치하면 돼요. 기록은 남아요.</li>
     </ul>
   </section>
@@ -142,24 +171,62 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
+  const $ = id => document.getElementById(id);
+  const web = location.protocol.startsWith('http');
+  // iPadOS Safari reports itself as a Mac; touch support tells them apart.
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  // The device's own button and steps go first.
+  if (ios) {
+    $('dl-ios').classList.add('primary');
+    $('dl-android').classList.remove('primary');
+    $('buttons').prepend($('dl-ios'), $('meta-ios'), $('ios-notice'));
+    $('steps').prepend($('ios-steps'));
+  }
+
+  // iOS installs over the air only through itms-services with an HTTPS manifest.
+  function iosUnavailable(msg) {
+    $('ios-notice').textContent = msg;
+    $('ios-notice').hidden = false;
+  }
+  if (location.protocol !== 'https:') {
+    iosUnavailable('iPhone · iPad 설치는 HTTPS 주소로 올린 페이지에서만 돼요. 지금은 설치 방법만 볼 수 있어요.');
+  } else {
+    const manifest = new URL('manifest.plist', location.href).href;
+    fetch(manifest)
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(text => {
+        // The manifest ships with a placeholder IPA address; a link with it would fail silently on the phone.
+        if (text.includes('REPLACE-WITH-HOST')) {
+          iosUnavailable('iOS 설치 주소가 아직 설정되지 않았어요. manifest.plist의 IPA 주소를 이 사이트 주소로 바꿔 주세요.');
+          return;
+        }
+        $('dl-ios').href = 'itms-services://?action=download-manifest&url=' + encodeURIComponent(manifest);
+      })
+      .catch(() => iosUnavailable('manifest.plist를 찾지 못해서 iOS 설치를 할 수 없어요.'));
+  }
+
   // QR only makes sense when the page is served over http(s); opened as a local file there is nothing to scan.
-  if (location.protocol.startsWith('http') && window.qrcode) {
+  if (web && window.qrcode) {
     try {
       const q = qrcode(0, 'M');
       q.addData(location.href.split('#')[0]);
       q.make();
-      document.getElementById('qr').innerHTML = q.createImgTag(5, 0);
-      document.getElementById('qr-section').hidden = false;
-    } catch (e) { /* no QR, the button still works */ }
+      $('qr').innerHTML = q.createImgTag(5, 0);
+      $('qr-section').hidden = false;
+    } catch (e) { /* no QR, the buttons still work */ }
   }
-  // Real file size from the server, so the page never shows a stale number.
-  if (location.protocol.startsWith('http')) {
-    fetch(document.getElementById('dl').getAttribute('href'), { method: 'HEAD' })
-      .then(r => {
-        const n = Number(r.headers.get('content-length'));
-        if (r.ok && n > 0) document.getElementById('size').textContent = Math.round(n / 1048576) + 'MB';
-      })
-      .catch(() => {});
+
+  // Real file sizes from the server, so the page never shows a stale number.
+  if (web) {
+    for (const [href, id] of [['meetstudy-0.1.0.apk', 'size-android'], ['MeetStudy.ipa', 'size-ios']]) {
+      fetch(href, { method: 'HEAD' })
+        .then(r => {
+          const n = Number(r.headers.get('content-length'));
+          if (r.ok && n > 0) $(id).textContent = Math.round(n / 1048576) + 'MB';
+        })
+        .catch(() => {});
+    }
   }
 </script>
 </body>
