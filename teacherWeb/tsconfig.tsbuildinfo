@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/test-setup.ts","./src/domain/loginid.test.ts","./src/domain/loginid.ts","./src/domain/report.contract.test.ts","./src/domain/report.ts","./src/domain/states.ts","./src/domain/types.ts","./vite.config.ts"],"version":"5.9.3"}

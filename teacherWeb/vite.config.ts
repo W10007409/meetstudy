@@ -1,0 +1,13 @@
+/// <reference types="vitest/config" />
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: { fs: { allow: ['..'] } }, // contracts/ lives one level up
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    exclude: ['**/node_modules/**', '**/*.emulator.test.ts'],
+  },
+})
